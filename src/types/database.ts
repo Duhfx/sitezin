@@ -46,11 +46,13 @@ export type Database = {
           token: string;
           created_at: string;
           revoked_at: string | null;
+          expires_at: string | null;
         };
-        Insert: Omit<Database["public"]["Tables"]["media_kit_access"]["Row"], "id" | "created_at" | "revoked_at"> & {
+        Insert: Omit<Database["public"]["Tables"]["media_kit_access"]["Row"], "id" | "created_at" | "revoked_at" | "expires_at"> & {
           id?: string;
           created_at?: string;
           revoked_at?: string | null;
+          expires_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["media_kit_access"]["Insert"]>;
         Relationships: [];

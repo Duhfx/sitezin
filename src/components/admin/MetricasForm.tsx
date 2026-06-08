@@ -76,7 +76,7 @@ export default function MetricasForm({ initialData }: Props) {
                 name={c.name}
                 type="number"
                 min="0"
-                step={c.isFloat ? "0.01" : "1"}
+                step={"isFloat" in c && c.isFloat ? "0.01" : "1"}
                 defaultValue={initialData?.[c.name] ?? ""}
               />
             </div>
@@ -95,7 +95,7 @@ export default function MetricasForm({ initialData }: Props) {
                 name={c.name}
                 type="number"
                 min="0"
-                step={c.isFloat ? "0.01" : "1"}
+                step={"isFloat" in c && c.isFloat ? "0.01" : "1"}
                 defaultValue={initialData?.[c.name] ?? ""}
               />
             </div>
