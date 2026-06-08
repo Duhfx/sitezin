@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function aprovarSolicitacao(id: string) {
+export async function aprovarSolicitacao(id: string, expiresAtDate?: string) {
   const supabase = await createClient();
 
   const array = new Uint8Array(32);
@@ -19,12 +19,17 @@ export async function aprovarSolicitacao(id: string) {
 
   if (statusError) return { ok: false, error: "Erro ao aprovar solicitação." };
 
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 14);
+  // expiresAtDate vem como "YYYY-MM-DD" do formulário; vazio = sem expiração.
+  let expiresAt: string | null = null;
+  if (expiresAtDate) {
+    const d = new Date(`${expiresAtDate}T23:59:59`);
+    if (Number.isNaN(d.getTime())) return { ok: false, error: "Data de validade inválida." };
+    expiresAt = d.toISOString();
+  }
 
   const { error: accessError } = await supabase
     .from("media_kit_access")
-    .insert({ request_id: id, token, expires_at: expiresAt.toISOString() });
+    .insert({ request_id: id, token, expires_at: expiresAt });
 
   if (accessError) return { ok: false, error: "Erro ao gerar token de acesso." };
 

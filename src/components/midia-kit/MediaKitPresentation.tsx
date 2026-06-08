@@ -110,7 +110,9 @@ export default function MediaKitPresentation({
 
       {/* ─── FLOATING CTA (Sticky Button) ─────────────────────────────────────── */}
       <motion.a
-        href="#contato"
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 1, duration: 0.5 }}

@@ -116,7 +116,7 @@ export default async function DetalheSolicitacaoPage({
                 {acessoAtivo && req.whatsapp && (
                   <div>
                     <a 
-                      href={`https://wa.me/${req.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${req.nome}, recebemos sua solicitação pela ${req.empresa}. O seu Mídia Kit exclusivo foi liberado!\n\nAcesse aqui: ${linkMidiaKit}\n\nLembrando que o link expira em 14 dias.`)}`}
+                      href={`https://wa.me/${req.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${req.nome}, recebemos sua solicitação pela ${req.empresa}. O seu Mídia Kit exclusivo foi liberado!\n\nAcesse aqui: ${linkMidiaKit}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 bg-[#25D366] text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-[#20b858] transition-colors shadow-sm"

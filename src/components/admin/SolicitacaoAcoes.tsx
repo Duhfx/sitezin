@@ -12,14 +12,21 @@ type Props =
   | { tipo: "pendente"; requestId: string }
   | { tipo: "revogar"; accessId: string; requestId: string };
 
+function validadePadrao() {
+  const d = new Date();
+  d.setDate(d.getDate() + 14);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function SolicitacaoAcoes(props: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const [validade, setValidade] = useState(validadePadrao());
 
   function handleAprovar() {
     if (props.tipo !== "pendente") return;
     startTransition(async () => {
-      const result = await aprovarSolicitacao(props.requestId);
+      const result = await aprovarSolicitacao(props.requestId, validade);
       if (!result.ok) setError(result.error ?? "Erro desconhecido.");
     });
   }
@@ -45,13 +52,29 @@ export default function SolicitacaoAcoes(props: Props) {
   return (
     <div className="space-y-3">
       {props.tipo === "pendente" && (
-        <div className="flex gap-3">
-          <Button onClick={handleAprovar} disabled={isPending}>
-            {isPending ? "Processando…" : "Aprovar"}
-          </Button>
-          <Button variant="destructive" onClick={handleReprovar} disabled={isPending}>
-            Reprovar
-          </Button>
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="validade" className="block text-xs font-medium text-muted-foreground mb-1">
+              Validade do acesso{" "}
+              <span className="font-normal">(deixe em branco para não expirar)</span>
+            </label>
+            <input
+              id="validade"
+              type="date"
+              value={validade}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setValidade(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={handleAprovar} disabled={isPending}>
+              {isPending ? "Processando…" : "Aprovar"}
+            </Button>
+            <Button variant="destructive" onClick={handleReprovar} disabled={isPending}>
+              Reprovar
+            </Button>
+          </div>
         </div>
       )}
 

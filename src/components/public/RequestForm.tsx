@@ -7,10 +7,19 @@ import { criarSolicitacao } from "@/app/midia-kit/actions";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function maskWhatsapp(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 11);
+  if (d.length === 0) return "";
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 const campos = [
   { name: "nome", label: "Seu Nome", type: "text", required: true, placeholder: "Como podemos te chamar?" },
   { name: "empresa", label: "Nome da Empresa", type: "text", required: true, placeholder: "Qual empresa você representa?" },
-  { name: "email", label: "E-mail Corporativo", type: "email", required: true, placeholder: "seu@email.com" },
+  { name: "email", label: "E-mail", type: "email", required: true, placeholder: "seu@email.com" },
   { name: "whatsapp", label: "WhatsApp", type: "tel", required: false, placeholder: "(00) 00000-0000" },
   { name: "instagram_empresa", label: "Instagram da empresa", type: "text", required: false, placeholder: "@suaempresa" },
 ] as const;
@@ -19,6 +28,7 @@ export default function RequestForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [enviado, setEnviado] = useState(false);
+  const [whatsapp, setWhatsapp] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,7 +71,7 @@ export default function RequestForm() {
           Solicitação Recebida!
         </h2>
         <p className="text-muted-foreground leading-relaxed">
-          Tudo certo. Nossa equipe de parcerias já recebeu seus dados e entrará em contato muito em breve para darmos o próximo passo.
+          Solicitação recebida e em breve entraremos em contato para definir o seu acesso!
         </p>
       </motion.div>
     );
@@ -85,11 +95,19 @@ export default function RequestForm() {
                   <span className="ml-1.5 text-xs font-normal text-muted-foreground">(opcional)</span>
                 )}
               </label>
-              <input 
-                id={campo.name} 
-                name={campo.name} 
-                type={campo.type} 
+              <input
+                id={campo.name}
+                name={campo.name}
+                type={campo.type}
                 placeholder={campo.placeholder}
+                {...(campo.name === "whatsapp"
+                  ? {
+                      value: whatsapp,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                        setWhatsapp(maskWhatsapp(e.target.value)),
+                      inputMode: "tel" as const,
+                    }
+                  : {})}
                 className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
               />
             </div>
@@ -104,7 +122,7 @@ export default function RequestForm() {
             id="descricao" 
             name="descricao" 
             rows={4} 
-            placeholder="Conte-nos como imagina nossa parceria (ex: cupons de desconto, banners, divulgações nas redes...)"
+            placeholder="Conte-nos brevemente como imagina a nossa parceria :)"
             className="w-full rounded-xl border border-border/50 bg-background/50 px-4 py-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground resize-y"
           />
         </div>

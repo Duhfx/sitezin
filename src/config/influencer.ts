@@ -18,7 +18,7 @@ export const influencer = {
 
   redes: {
     instagram: "https://instagram.com/alinecp",
-    tiktok: "https://tiktok.com/@alinecp",
+    tiktok: "https://tiktok.com/@lineeec",
     youtube: "https://youtube.com/@alinecp",
   },
 
@@ -72,6 +72,6 @@ export const influencer = {
 
   contato: {
     email: "contato@influenciadora.com",
-    whatsapp: "+55 11 99999-9999",
+    whatsapp: "+55 47 99693-3518",
   },
 };
