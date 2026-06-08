@@ -65,7 +65,7 @@ export default async function DetalheSolicitacaoPage({
         {/* Dados da solicitação */}
         <Card>
           <h2 className="mb-4 text-sm font-semibold text-foreground">Dados da solicitação</h2>
-          <dl className="grid grid-cols-2 gap-4">
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Campo label="Nome" value={req.nome} />
             <Campo label="Empresa" value={req.empresa} />
             <Campo label="Cargo" value={req.cargo} />

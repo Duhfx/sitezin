@@ -35,8 +35,8 @@ export default function CuponsTable({ cupons }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="border-b border-border bg-muted">
             <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Logo</th>
