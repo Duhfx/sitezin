@@ -38,8 +38,8 @@ export async function salvarMetricas(formData: FormData) {
     return { ok: false, error: "Erro ao salvar métricas." };
   }
 
-  revalidatePath("/admin/metricas");
-  redirect("/admin/metricas");
+  revalidatePath("/admin/perfil");
+  redirect("/admin/perfil?tab=metricas");
 }
 
 export async function editarMetricas(id: string, formData: FormData) {
@@ -70,6 +70,6 @@ export async function editarMetricas(id: string, formData: FormData) {
     return { ok: false, error: "Erro ao atualizar métricas." };
   }
 
-  revalidatePath("/admin/metricas");
-  redirect("/admin/metricas");
+  revalidatePath("/admin/perfil");
+  redirect("/admin/perfil?tab=metricas");
 }

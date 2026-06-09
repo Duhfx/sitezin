@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Label from "@/components/ui/Label";
-import { salvarMetricas, editarMetricas } from "@/app/admin/(protected)/metricas/actions";
+import { salvarMetricas, editarMetricas } from "@/app/admin/(protected)/perfil/metricas/actions";
 import type { InfluencerMetrics } from "@/types/database";
 
 type Props = { initialData?: InfluencerMetrics };
@@ -48,14 +48,16 @@ export default function MetricasForm({ initialData }: Props) {
       : await salvarMetricas(formData);
     setLoading(false);
 
-    if (result && !result.ok) {
+    if (result?.ok) {
+      router.push("/admin/perfil?tab=metricas");
+    } else if (result) {
       setError(result.error);
     }
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-8 max-w-3xl">
-      <div className="space-y-1.5 max-w-sm">
+      <div className="max-w-sm space-y-1.5">
         <Label htmlFor="reference_month">Mês de referência</Label>
         <Input
           id="reference_month"
@@ -66,7 +68,7 @@ export default function MetricasForm({ initialData }: Props) {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b pb-2">Instagram</h3>
+        <h3 className="border-b pb-2 text-lg font-medium text-foreground">Instagram</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {CAMPOS_INSTAGRAM.map((c) => (
             <div key={c.name} className="space-y-1.5">
@@ -85,7 +87,7 @@ export default function MetricasForm({ initialData }: Props) {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b pb-2">TikTok</h3>
+        <h3 className="border-b pb-2 text-lg font-medium text-foreground">TikTok</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           {CAMPOS_TIKTOK.map((c) => (
             <div key={c.name} className="space-y-1.5">
@@ -104,9 +106,7 @@ export default function MetricasForm({ initialData }: Props) {
       </div>
 
       {error && (
-        <p className="rounded-sm bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
+        <p className="rounded-sm bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <div className="flex gap-3 pt-2">
@@ -115,8 +115,8 @@ export default function MetricasForm({ initialData }: Props) {
         </Button>
         <Button
           type="button"
-          variant="ghost"
-          onClick={() => router.push("/admin/metricas")}
+          variant="secondary"
+          onClick={() => router.push("/admin/perfil?tab=metricas")}
         >
           Cancelar
         </Button>

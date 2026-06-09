@@ -93,6 +93,32 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["influencer_metrics"]["Insert"]>;
         Relationships: [];
       };
+      influencer_profile: {
+        Row: {
+          id: string;
+          nome: string;
+          foto_url: string | null;
+          biografia: string;
+          nicho: string;
+          publico_alvo: string;
+          top_estados: TopEstado[];
+          instagram_url: string | null;
+          tiktok_url: string | null;
+          youtube_url: string | null;
+          formatos: Formato[];
+          cases: Case[];
+          moodboard: string[];
+          email: string | null;
+          whatsapp: string | null;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["influencer_profile"]["Row"], "id" | "updated_at"> & {
+          id?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["influencer_profile"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -101,8 +127,13 @@ export type Database = {
   };
 };
 
+export type TopEstado = { uf: string; pct: number };
+export type Formato = { nome: string; descricao: string };
+export type Case = { marca: string; resultado: string; periodo: string };
+
 export type Coupon = Database["public"]["Tables"]["coupons"]["Row"];
 export type MediaKitRequest = Database["public"]["Tables"]["media_kit_requests"]["Row"];
 export type MediaKitAccess = Database["public"]["Tables"]["media_kit_access"]["Row"];
 export type MediaKitView = Database["public"]["Tables"]["media_kit_views"]["Row"];
 export type InfluencerMetrics = Database["public"]["Tables"]["influencer_metrics"]["Row"];
+export type InfluencerProfile = Database["public"]["Tables"]["influencer_profile"]["Row"];

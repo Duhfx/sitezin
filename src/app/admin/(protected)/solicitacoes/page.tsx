@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import Badge from "@/components/ui/Badge";
+import SolicitacoesTable from "@/components/admin/SolicitacoesTable";
 
 type Status = "pendente" | "aprovado" | "reprovado";
 
@@ -11,16 +11,6 @@ const TABS: { label: string; value: Status | "todos" }[] = [
   { label: "Reprovados", value: "reprovado" },
 ];
 
-const badgeVariant: Record<Status, "warning" | "success" | "destructive"> = {
-  pendente: "warning",
-  aprovado: "success",
-  reprovado: "destructive",
-};
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR");
-}
-
 export default async function SolicitacoesPage({
   searchParams,
 }: {
@@ -29,16 +19,22 @@ export default async function SolicitacoesPage({
   const filtro = searchParams.status as Status | "todos" | undefined;
   const supabase = await createClient();
 
-  let query = supabase
+  const { data: todas } = await supabase
     .from("media_kit_requests")
     .select("id, nome, empresa, email, status, created_at")
     .order("created_at", { ascending: false });
 
-  if (filtro && filtro !== "todos") {
-    query = query.eq("status", filtro);
-  }
+  const contadores: Record<Status | "todos", number> = {
+    todos: todas?.length ?? 0,
+    pendente: todas?.filter((s) => s.status === "pendente").length ?? 0,
+    aprovado: todas?.filter((s) => s.status === "aprovado").length ?? 0,
+    reprovado: todas?.filter((s) => s.status === "reprovado").length ?? 0,
+  };
 
-  const { data: solicitacoes } = await query;
+  const solicitacoes =
+    filtro && filtro !== "todos"
+      ? (todas?.filter((s) => s.status === filtro) ?? [])
+      : (todas ?? []);
 
   const ativo = filtro ?? "todos";
 
@@ -48,71 +44,45 @@ export default async function SolicitacoesPage({
 
       {/* Filtro por status */}
       <div className="mb-4 flex gap-1 rounded-lg border border-border bg-muted p-1 w-fit">
-        {TABS.map((tab) => (
-          <Link
-            key={tab.value}
-            href={
-              tab.value === "todos"
-                ? "/admin/solicitacoes"
-                : `/admin/solicitacoes?status=${tab.value}`
-            }
-            className={`rounded px-3 py-1.5 text-sm font-medium transition ${
-              ativo === tab.value
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
+        {TABS.map((tab) => {
+          const isAtivo = ativo === tab.value;
+          const count = contadores[tab.value];
+          return (
+            <Link
+              key={tab.value}
+              href={
+                tab.value === "todos"
+                  ? "/admin/solicitacoes"
+                  : `/admin/solicitacoes?status=${tab.value}`
+              }
+              className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition ${
+                isAtivo
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
+                  isAtivo
+                    ? "bg-foreground/10 text-foreground"
+                    : "bg-muted-foreground/20 text-muted-foreground"
+                }`}
+              >
+                {count}
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
       {/* Tabela */}
-      {!solicitacoes || solicitacoes.length === 0 ? (
+      {solicitacoes.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
           Nenhuma solicitação encontrada.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted">
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Nome</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Empresa</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">E-mail</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {solicitacoes.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-border last:border-0 transition-colors hover:bg-muted/40"
-                >
-                  <td className="px-4 py-3 font-medium text-foreground">{s.nome}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.empresa}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.email}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDate(s.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={badgeVariant[s.status as Status]}>
-                      {s.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/solicitacoes/${s.id}`}
-                      className="text-xs font-medium text-primary hover:underline"
-                    >
-                      Ver detalhes →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SolicitacoesTable solicitacoes={solicitacoes} />
       )}
     </div>
   );

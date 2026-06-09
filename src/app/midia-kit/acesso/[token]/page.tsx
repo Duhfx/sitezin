@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase/server";
-import { influencer } from "@/config/influencer";
+import { PROFILE_ID, profileFromConfig, toPresentation } from "@/lib/influencer-profile";
 import type { InfluencerMetrics } from "@/types/database";
 import MediaKitPresentation from "@/components/midia-kit/MediaKitPresentation";
 
@@ -74,6 +74,15 @@ export default async function MidiaKitAcessoPage({
   await supabase
     .from("media_kit_views")
     .insert({ access_id: acesso.id, ip, user_agent: userAgent });
+
+  // Busca perfil (conteúdo estático cadastrável) — fallback para o config
+  const { data: perfilRow } = await supabase
+    .from("influencer_profile")
+    .select("*")
+    .eq("id", PROFILE_ID)
+    .maybeSingle();
+
+  const influencer = toPresentation(perfilRow ?? profileFromConfig());
 
   // Busca métricas
   const { data: metricas } = await supabase

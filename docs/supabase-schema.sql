@@ -61,6 +61,27 @@ create table public.influencer_metrics (
   created_at           timestamptz not null default now()
 );
 
+-- ── Perfil da Influenciadora (conteúdo estático, linha única) ──────
+-- Seed e migration aplicável em docs/supabase-perfil-cadastravel.sql
+create table public.influencer_profile (
+  id            uuid primary key default gen_random_uuid(),
+  nome          text not null default '',
+  foto_url      text,
+  biografia     text not null default '',
+  nicho         text not null default '',
+  publico_alvo  text not null default '',
+  top_estados   jsonb not null default '[]'::jsonb,
+  instagram_url text,
+  tiktok_url    text,
+  youtube_url   text,
+  formatos      jsonb not null default '[]'::jsonb,
+  cases         jsonb not null default '[]'::jsonb,
+  moodboard     jsonb not null default '[]'::jsonb,
+  email         text,
+  whatsapp      text,
+  updated_at    timestamptz not null default now()
+);
+
 -- ================================================================
 -- Índices
 -- ================================================================
@@ -82,6 +103,7 @@ alter table public.media_kit_requests enable row level security;
 alter table public.media_kit_access   enable row level security;
 alter table public.media_kit_views    enable row level security;
 alter table public.influencer_metrics enable row level security;
+alter table public.influencer_profile enable row level security;
 
 -- ── Cupons: leitura pública (apenas ativos), escrita só autenticado ──
 create policy "cupons_public_read"
@@ -129,6 +151,16 @@ create policy "metrics_public_read"
 
 create policy "metrics_admin_write"
   on public.influencer_metrics for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+-- ── Perfil: leitura pública, escrita só autenticado ──────────────────
+create policy "profile_public_read"
+  on public.influencer_profile for select
+  using (true);
+
+create policy "profile_admin_write"
+  on public.influencer_profile for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
