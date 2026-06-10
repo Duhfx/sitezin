@@ -2,13 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import PerfilForm from "@/components/admin/PerfilForm";
 import PerfilTabs from "@/components/admin/PerfilTabs";
 import MetricasPanel, { type MetricaRow } from "@/components/admin/MetricasPanel";
+import InstagramConnect from "@/components/admin/InstagramConnect";
 import { PROFILE_ID, profileFromConfig } from "@/lib/influencer-profile";
 import type { InfluencerProfile } from "@/types/database";
 
 export default async function PerfilPage({
   searchParams,
 }: {
-  searchParams?: { tab?: string };
+  searchParams?: { tab?: string; instagram?: string };
 }) {
   const supabase = await createClient();
 
@@ -26,6 +27,7 @@ export default async function PerfilPage({
   const rowsDesc = [...rows].reverse();
 
   const defaultTab = searchParams?.tab === "metricas" ? "metricas" : "conteudo";
+  const instagramStatus = searchParams?.instagram;
 
   return (
     <div>
@@ -35,6 +37,14 @@ export default async function PerfilPage({
           Conteúdo e métricas exibidos na página do mídia kit.
         </p>
       </div>
+
+      <InstagramConnect
+        username={perfil.instagram_username ?? null}
+        followers={perfil.instagram_followers ?? null}
+        posts={perfil.instagram_posts ?? null}
+        syncedAt={perfil.instagram_synced_at ?? null}
+        status={instagramStatus}
+      />
 
       <PerfilTabs
         defaultTab={defaultTab}

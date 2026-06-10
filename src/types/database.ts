@@ -111,10 +111,38 @@ export type Database = {
           email: string | null;
           whatsapp: string | null;
           updated_at: string;
+          meta_access_token: string | null;
+          facebook_page_id: string | null;
+          instagram_user_id: string | null;
+          meta_token_expires_at: string | null;
+          instagram_username: string | null;
+          instagram_followers: number | null;
+          instagram_posts: number | null;
+          instagram_synced_at: string | null;
         };
-        Insert: Omit<Database["public"]["Tables"]["influencer_profile"]["Row"], "id" | "updated_at"> & {
+        Insert: Omit<
+          Database["public"]["Tables"]["influencer_profile"]["Row"],
+          | "id"
+          | "updated_at"
+          | "meta_access_token"
+          | "facebook_page_id"
+          | "instagram_user_id"
+          | "meta_token_expires_at"
+          | "instagram_username"
+          | "instagram_followers"
+          | "instagram_posts"
+          | "instagram_synced_at"
+        > & {
           id?: string;
           updated_at?: string;
+          meta_access_token?: string | null;
+          facebook_page_id?: string | null;
+          instagram_user_id?: string | null;
+          meta_token_expires_at?: string | null;
+          instagram_username?: string | null;
+          instagram_followers?: number | null;
+          instagram_posts?: number | null;
+          instagram_synced_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["influencer_profile"]["Insert"]>;
         Relationships: [];

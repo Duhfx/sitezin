@@ -24,6 +24,14 @@ export function profileFromConfig(): InfluencerProfile {
     email: influencer.contato.email,
     whatsapp: influencer.contato.whatsapp,
     updated_at: new Date(0).toISOString(),
+    meta_access_token: null,
+    facebook_page_id: null,
+    instagram_user_id: null,
+    meta_token_expires_at: null,
+    instagram_username: null,
+    instagram_followers: null,
+    instagram_posts: null,
+    instagram_synced_at: null,
   };
 }
 
