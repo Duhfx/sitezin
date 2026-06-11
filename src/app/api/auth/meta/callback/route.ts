@@ -33,9 +33,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${appUrl}/admin/perfil?instagram=erro`);
   }
 
-  const accessToken: string = tokenData.access_token;
-  const expiresAt: string | null = tokenData.expires_in
-    ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+  // 1b. Trocar o token de curta duração por um de longa duração (~60 dias),
+  // necessário para a sincronização sob demanda funcionar dias depois.
+  const longLivedParams = new URLSearchParams({
+    grant_type: "fb_exchange_token",
+    client_id: appId,
+    client_secret: appSecret,
+    fb_exchange_token: tokenData.access_token,
+  });
+
+  const longLivedRes = await fetch(
+    `https://graph.facebook.com/v23.0/oauth/access_token?${longLivedParams}`
+  );
+  const longLivedData = await longLivedRes.json();
+
+  const accessToken: string = longLivedData.access_token ?? tokenData.access_token;
+  const expiresIn: number | undefined = longLivedData.expires_in ?? tokenData.expires_in;
+  const expiresAt: string | null = expiresIn
+    ? new Date(Date.now() + expiresIn * 1000).toISOString()
     : null;
 
   // 2. Descobrir página do Facebook vinculada ao usuário

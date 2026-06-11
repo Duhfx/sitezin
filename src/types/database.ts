@@ -80,10 +80,16 @@ export type Database = {
           instagram_reach: number;
           instagram_impressions: number;
           instagram_engagement: number;
+          instagram_interactions: number;
+          instagram_shares: number;
+          instagram_saves: number;
           tiktok_followers: number;
           tiktok_views: number;
           tiktok_likes: number;
           tiktok_engagement: number;
+          tiktok_interactions: number;
+          tiktok_shares: number;
+          tiktok_saves: number;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["influencer_metrics"]["Row"], "id" | "created_at"> & {
@@ -101,7 +107,10 @@ export type Database = {
           biografia: string;
           nicho: string;
           publico_alvo: string;
+          localizacao: string | null;
           top_estados: TopEstado[];
+          audiencia_genero: AudienciaGenero[];
+          audiencia_idade: AudienciaIdade[];
           instagram_url: string | null;
           tiktok_url: string | null;
           youtube_url: string | null;
@@ -158,6 +167,8 @@ export type Database = {
 export type TopEstado = { uf: string; pct: number };
 export type Formato = { nome: string; descricao: string };
 export type Case = { marca: string; resultado: string; periodo: string };
+export type AudienciaGenero = { label: string; pct: number };
+export type AudienciaIdade = { faixa: string; pct: number };
 
 export type Coupon = Database["public"]["Tables"]["coupons"]["Row"];
 export type MediaKitRequest = Database["public"]["Tables"]["media_kit_requests"]["Row"];

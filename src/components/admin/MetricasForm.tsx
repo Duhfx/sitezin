@@ -15,6 +15,9 @@ const CAMPOS_INSTAGRAM = [
   { name: "instagram_reach", label: "Alcance (30d)" },
   { name: "instagram_impressions", label: "Impressões (30d)" },
   { name: "instagram_engagement", label: "Taxa de Engajamento (%)", isFloat: true },
+  { name: "instagram_interactions", label: "Interações" },
+  { name: "instagram_shares", label: "Compartilhamentos" },
+  { name: "instagram_saves", label: "Salvamentos" },
 ] as const;
 
 const CAMPOS_TIKTOK = [
@@ -22,6 +25,9 @@ const CAMPOS_TIKTOK = [
   { name: "tiktok_views", label: "Views Médias" },
   { name: "tiktok_likes", label: "Curtidas Totais" },
   { name: "tiktok_engagement", label: "Taxa de Engajamento (%)", isFloat: true },
+  { name: "tiktok_interactions", label: "Interações" },
+  { name: "tiktok_shares", label: "Compartilhamentos" },
+  { name: "tiktok_saves", label: "Salvamentos" },
 ] as const;
 
 export default function MetricasForm({ initialData }: Props) {

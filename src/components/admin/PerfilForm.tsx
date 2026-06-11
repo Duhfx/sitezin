@@ -6,7 +6,14 @@ import Input from "@/components/ui/Input";
 import Label from "@/components/ui/Label";
 import Textarea from "@/components/ui/Textarea";
 import { salvarPerfil } from "@/app/admin/(protected)/perfil/actions";
-import type { Case, Formato, InfluencerProfile, TopEstado } from "@/types/database";
+import type {
+  AudienciaGenero,
+  AudienciaIdade,
+  Case,
+  Formato,
+  InfluencerProfile,
+  TopEstado,
+} from "@/types/database";
 
 type Props = { initialData: InfluencerProfile };
 
@@ -16,6 +23,12 @@ export default function PerfilForm({ initialData }: Props) {
   const [success, setSuccess] = useState(false);
 
   const [topEstados, setTopEstados] = useState<TopEstado[]>(initialData.top_estados ?? []);
+  const [audienciaGenero, setAudienciaGenero] = useState<AudienciaGenero[]>(
+    initialData.audiencia_genero ?? [],
+  );
+  const [audienciaIdade, setAudienciaIdade] = useState<AudienciaIdade[]>(
+    initialData.audiencia_idade ?? [],
+  );
   const [formatos, setFormatos] = useState<Formato[]>(initialData.formatos ?? []);
   const [cases, setCases] = useState<Case[]>(initialData.cases ?? []);
 
@@ -50,15 +63,17 @@ export default function PerfilForm({ initialData }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-10 max-w-3xl">
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {/* Listas serializadas */}
       <input type="hidden" name="top_estados" value={JSON.stringify(topEstados)} />
+      <input type="hidden" name="audiencia_genero" value={JSON.stringify(audienciaGenero)} />
+      <input type="hidden" name="audiencia_idade" value={JSON.stringify(audienciaIdade)} />
       <input type="hidden" name="formatos" value={JSON.stringify(formatos)} />
       <input type="hidden" name="cases" value={JSON.stringify(cases)} />
       <input type="hidden" name="foto_url_atual" value={initialData.foto_url ?? ""} />
 
       {/* ── Identidade ──────────────────────────────────────────── */}
-      <section className="space-y-4">
+      <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-card">
         <h3 className="border-b pb-2 text-lg font-medium text-foreground">Identidade</h3>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -80,6 +95,19 @@ export default function PerfilForm({ initialData }: Props) {
         <div className="space-y-1.5">
           <Label htmlFor="publico_alvo">Público-alvo</Label>
           <Input id="publico_alvo" name="publico_alvo" defaultValue={initialData.publico_alvo} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="localizacao">
+            Localização
+            <span className="ml-1 font-normal text-muted-foreground">(exibida no topo do mídia kit)</span>
+          </Label>
+          <Input
+            id="localizacao"
+            name="localizacao"
+            defaultValue={initialData.localizacao ?? ""}
+            placeholder="Blumenau, SC · São Paulo, SP"
+          />
         </div>
 
         <div className="space-y-1.5">
@@ -110,7 +138,7 @@ export default function PerfilForm({ initialData }: Props) {
       </section>
 
       {/* ── Redes & Contato ─────────────────────────────────────── */}
-      <section className="space-y-4">
+      <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-card">
         <h3 className="border-b pb-2 text-lg font-medium text-foreground">Redes & Contato</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -136,9 +164,9 @@ export default function PerfilForm({ initialData }: Props) {
         </div>
       </section>
 
-      {/* ── Top Estados ─────────────────────────────────────────── */}
+      {/* ── Top Localidades ─────────────────────────────────────── */}
       <ListEditor
-        titulo="Top Estados"
+        titulo="Top Localidades"
         itens={topEstados}
         onAdd={() => setTopEstados([...topEstados, { uf: "", pct: 0 }])}
         onRemove={(i) => setTopEstados(topEstados.filter((_, idx) => idx !== i))}
@@ -146,7 +174,7 @@ export default function PerfilForm({ initialData }: Props) {
           <div className="grid grid-cols-[1fr_7rem] gap-3">
             <div className="space-y-1">
               <Input
-                placeholder="SP"
+                placeholder="São Paulo"
                 value={estado.uf}
                 onChange={(e) => {
                   const next = [...topEstados];
@@ -165,6 +193,72 @@ export default function PerfilForm({ initialData }: Props) {
                 const next = [...topEstados];
                 next[i] = { ...next[i], pct: Number(e.target.value) };
                 setTopEstados(next);
+              }}
+            />
+          </div>
+        )}
+      />
+
+      {/* ── Audiência: Gênero ───────────────────────────────────── */}
+      <ListEditor
+        titulo="Audiência · Gênero"
+        itens={audienciaGenero}
+        onAdd={() => setAudienciaGenero([...audienciaGenero, { label: "", pct: 0 }])}
+        onRemove={(i) => setAudienciaGenero(audienciaGenero.filter((_, idx) => idx !== i))}
+        render={(item, i) => (
+          <div className="grid grid-cols-[1fr_7rem] gap-3">
+            <Input
+              placeholder="Feminino"
+              value={item.label}
+              onChange={(e) => {
+                const next = [...audienciaGenero];
+                next[i] = { ...next[i], label: e.target.value };
+                setAudienciaGenero(next);
+              }}
+            />
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              placeholder="%"
+              value={item.pct}
+              onChange={(e) => {
+                const next = [...audienciaGenero];
+                next[i] = { ...next[i], pct: Number(e.target.value) };
+                setAudienciaGenero(next);
+              }}
+            />
+          </div>
+        )}
+      />
+
+      {/* ── Audiência: Faixa Etária ─────────────────────────────── */}
+      <ListEditor
+        titulo="Audiência · Faixa Etária"
+        itens={audienciaIdade}
+        onAdd={() => setAudienciaIdade([...audienciaIdade, { faixa: "", pct: 0 }])}
+        onRemove={(i) => setAudienciaIdade(audienciaIdade.filter((_, idx) => idx !== i))}
+        render={(item, i) => (
+          <div className="grid grid-cols-[1fr_7rem] gap-3">
+            <Input
+              placeholder="18–24 anos"
+              value={item.faixa}
+              onChange={(e) => {
+                const next = [...audienciaIdade];
+                next[i] = { ...next[i], faixa: e.target.value };
+                setAudienciaIdade(next);
+              }}
+            />
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              placeholder="%"
+              value={item.pct}
+              onChange={(e) => {
+                const next = [...audienciaIdade];
+                next[i] = { ...next[i], pct: Number(e.target.value) };
+                setAudienciaIdade(next);
               }}
             />
           </div>
@@ -243,7 +337,7 @@ export default function PerfilForm({ initialData }: Props) {
       />
 
       {/* ── Moodboard (3 imagens fixas) ─────────────────────────── */}
-      <section className="space-y-4">
+      <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-card">
         <h3 className="border-b pb-2 text-lg font-medium text-foreground">Moodboard</h3>
 
         <div className="flex items-start gap-2 rounded-md bg-warning/10 px-3 py-2.5">
@@ -316,7 +410,7 @@ function ListEditor<T>({
   render: (item: T, index: number) => React.ReactNode;
 }) {
   return (
-    <section className="space-y-4">
+    <section className="space-y-5 rounded-lg border border-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between border-b pb-2">
         <h3 className="text-lg font-medium text-foreground">{titulo}</h3>
         <Button type="button" variant="ghost" size="sm" onClick={onAdd}>

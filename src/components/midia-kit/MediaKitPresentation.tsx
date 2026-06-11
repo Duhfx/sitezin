@@ -1,17 +1,29 @@
 "use client";
 
-import { Camera, Video, MessageCircle, TrendingUp, Users, MapPin } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
-import type { TopEstado, Formato, Case } from "@/types/database";
+import React, { useRef, useState, useEffect } from "react";
+import {
+  MapPin, Users, Mail, Phone, Film, LayoutGrid, Layers, Play, Sparkles, Radio,
+} from "lucide-react";
+import {
+  motion, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion,
+} from "framer-motion";
+import type {
+  TopEstado, Formato, Case, AudienciaGenero, AudienciaIdade,
+} from "@/types/database";
 
+// ─── Tipos das props ──────────────────────────────────────────────────────────
 type InfluencerPresentation = {
   nome: string;
   foto: string;
   biografia: string;
   nicho: string;
   publicoAlvo: string;
+  localizacao: string;
   topEstados: TopEstado[];
+  audienciaGenero: AudienciaGenero[];
+  audienciaIdade: AudienciaIdade[];
   redes: { instagram: string; tiktok: string; youtube: string };
+  handles: { instagram: string; tiktok: string };
   formatos: Formato[];
   cases: Case[];
   moodboard: string[];
@@ -22,147 +34,125 @@ type Metrics = {
   reference_month: string;
   instagram_followers?: number;
   instagram_reach?: number;
+  instagram_impressions?: number;
   instagram_engagement?: number;
+  instagram_interactions?: number;
+  instagram_shares?: number;
+  instagram_saves?: number;
   tiktok_followers?: number;
   tiktok_views?: number;
+  tiktok_likes?: number;
   tiktok_engagement?: number;
+  tiktok_interactions?: number;
+  tiktok_shares?: number;
+  tiktok_saves?: number;
 }[];
 
-function fmtNum(n: number) {
-  if (n == null) return "0";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("pt-BR");
+// ─── Ícones de marca ──────────────────────────────────────────────────────────
+const InstagramIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+);
+
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+);
+
+// ─── Animações ────────────────────────────────────────────────────────────────
+const fadeUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+  },
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
+};
+
+// ─── Helpers de formatação ────────────────────────────────────────────────────
+// Divide um número em { value, suffix, decimals } para alimentar o AnimatedNumber.
+// Ex.: 1_200_000 → { value: 1.2, suffix: "M", decimals: 1 }; 450_000 → { 450, "K", 0 }.
+function splitNum(n: number): { value: number; suffix: string; decimals: number } {
+  if (n >= 1_000_000) {
+    const v = parseFloat((n / 1_000_000).toFixed(1));
+    return { value: v, suffix: "M", decimals: Number.isInteger(v) ? 0 : 1 };
+  }
+  if (n >= 1_000) {
+    const v = parseFloat((n / 1_000).toFixed(1));
+    return { value: v, suffix: "K", decimals: Number.isInteger(v) ? 0 : 1 };
+  }
+  return { value: n, suffix: "", decimals: 0 };
 }
 
-function fmtMonth(dateStr: string) {
-  const [year, month] = dateStr.split("-");
-  return new Date(Number(year), Number(month) - 1)
-    .toLocaleDateString("pt-BR", { month: "short" })
-    .replace(".", "");
+// Quebra o nicho ("Lifestyle & Viagens") em tags individuais.
+function splitNicho(nicho: string): string[] {
+  return nicho.split(/[,&·/|]+/).map((s) => s.trim()).filter(Boolean);
 }
 
 function fmtWhatsapp(raw: string) {
   const digits = raw.replace(/\D/g, "");
   if (digits.length === 13) {
-    // +55 (XX) 9 XXXX-XXXX
-    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 5)} ${digits.slice(5, 9)}-${digits.slice(9)}`;
+    return `+${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 9)}-${digits.slice(9)}`;
   }
   return raw;
 }
 
-const NOISE_BG =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+const FORMAT_ICONS = [Film, LayoutGrid, Layers, Play, Sparkles, Radio];
 
-const TK_COLOR = "#6366f1";  // indigo — funciona como atributo SVG
-const IG_COLOR = "#16a34a";  // green-700, espelha --primary sem CSS var
+// ─── Número animado ao entrar na viewport ─────────────────────────────────────
+function AnimatedNumber({ value, decimals = 0 }: { value: number; decimals?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true });
+  const reduce = useReducedMotion();
+  const motionValue = useMotionValue(0);
+  const springValue = useSpring(motionValue, { duration: 1800, bounce: 0 });
+  const [display, setDisplay] = useState(value.toFixed(decimals));
 
-function buildPath(
-  values: number[],
-  min: number,
-  max: number,
-  w: number,
-  h: number,
-  pad: number,
-) {
-  const range = max - min || 1;
-  const pts = values.map((v, i) => {
-    const x = pad + (i / (values.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((v - min) / range) * (h - pad * 2);
-    return [x, y] as const;
-  });
-  const line = pts
-    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
-    .join(" ");
-  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)},${h - pad} L${pts[0][0].toFixed(1)},${h - pad} Z`;
-  return { line, area, last: pts[pts.length - 1] };
+  useEffect(() => {
+    if (reduce) {
+      setDisplay(value.toFixed(decimals));
+      return;
+    }
+    if (isInView) motionValue.set(value);
+  }, [isInView, motionValue, value, decimals, reduce]);
+
+  useEffect(() => {
+    if (reduce) return;
+    return springValue.on("change", (v) => setDisplay(v.toFixed(decimals)));
+  }, [springValue, decimals, reduce]);
+
+  return <span ref={ref}>{display}</span>;
 }
 
-// ─── Gráfico de crescimento com duas séries ───────────────────────────────────
-function GrowthChart({
-  ig, tk, labels,
-}: {
-  ig: number[];
-  tk: number[];
-  labels: string[];
-}) {
-  const hasIg = ig.length >= 2;
-  const hasTk = tk.length >= 2 && tk.some((v) => v > 0);
-  if (!hasIg) return null;
-
-  const w = 100;
-  const h = 52;
-  const pad = 3;
-
-  // Escala compartilhada: ambas as séries normalizadas pelo mesmo máximo,
-  // partindo de 0, para que as linhas fiquem em posições absolutas distintas.
-  const sharedMin = 0;
-  const sharedMax = Math.max(...ig, ...(hasTk ? tk : [0])) || 1;
-
-  const igPath = buildPath(ig, sharedMin, sharedMax, w, h, pad);
-  const tkPath = hasTk ? buildPath(tk, sharedMin, sharedMax, w, h, pad) : null;
-
+// Número grande com sufixo (M/K) estilizado.
+function BigNumber({ n, suffixClassName }: { n: number; suffixClassName?: string }) {
+  const { value, suffix, decimals } = splitNum(n);
   return (
-    <div className="space-y-2">
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="none"
-        className="w-full h-24"
-        aria-hidden
-      >
-        <defs>
-          <linearGradient id="igFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={IG_COLOR} stopOpacity="0.18" />
-            <stop offset="100%" stopColor={IG_COLOR} stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="tkFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={TK_COLOR} stopOpacity="0.15" />
-            <stop offset="100%" stopColor={TK_COLOR} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* Áreas de preenchimento — ambas primeiro, para não cobrir nenhuma linha */}
-        <path d={igPath.area} fill="url(#igFill)" />
-        {tkPath && <path d={tkPath.area} fill="url(#tkFill)" />}
-
-        {/* Linhas por cima das áreas — TK mais fina, IG mais grossa */}
-        {tkPath && (
-          <>
-            <path d={tkPath.line} fill="none" stroke={TK_COLOR} strokeWidth="1"
-              strokeLinecap="round" strokeLinejoin="round"
-            />
-            <circle cx={tkPath.last[0]} cy={tkPath.last[1]} r="2" fill={TK_COLOR} />
-          </>
-        )}
-        <path d={igPath.line} fill="none" stroke={IG_COLOR} strokeWidth="1"
-          strokeLinecap="round" strokeLinejoin="round"
-        />
-        <circle cx={igPath.last[0]} cy={igPath.last[1]} r="2.5" fill={IG_COLOR} />
-      </svg>
-
-      {/* Valores inicial → final por rede */}
-      <div className="flex flex-col gap-1 text-xs font-medium px-0.5">
-        <div className="flex justify-between items-center">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-0.5 rounded-full" style={{ background: IG_COLOR }} />
-            <span className="text-muted-foreground">Instagram</span>
-          </span>
-          <span className="text-muted-foreground">{labels[0]} · {fmtNum(ig[0])} → {labels[labels.length - 1]} · {fmtNum(ig[ig.length - 1])}</span>
-        </div>
-        {hasTk && tk && (
-          <div className="flex justify-between items-center">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-0.5 rounded-full" style={{ borderTop: `2px dashed ${TK_COLOR}` }} />
-              <span className="text-muted-foreground">TikTok</span>
-            </span>
-            <span className="text-muted-foreground">{labels[0]} · {fmtNum(tk[0])} → {labels[labels.length - 1]} · {fmtNum(tk[tk.length - 1])}</span>
-          </div>
-        )}
-      </div>
-    </div>
+    <>
+      <AnimatedNumber value={value} decimals={decimals} />
+      {suffix && (
+        <span className={suffixClassName ?? "not-italic font-sans text-2xl text-slate-400"}>{suffix}</span>
+      )}
+    </>
   );
 }
 
+// Estatística simples (sem animação) usada nos mini-cards.
+function fmtCompact(n: number) {
+  const { value, suffix, decimals } = splitNum(n);
+  return { value: value.toFixed(decimals), suffix };
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 export default function MediaKitPresentation({
   influencer,
   metricas,
@@ -170,348 +160,672 @@ export default function MediaKitPresentation({
   influencer: InfluencerPresentation;
   metricas: Metrics;
 }) {
-  const shouldReduceMotion = useReducedMotion();
+  const containerRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"],
+  });
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  const y1 = useTransform(smoothProgress, [0, 1], [60, -60]);
+  const y2 = useTransform(smoothProgress, [0, 1], [-20, 20]);
+  const y3 = useTransform(smoothProgress, [0, 1], [120, -120]);
 
-  const ultimaMetrica = metricas.length > 0 ? metricas[metricas.length - 1] : null;
+  const m = metricas.length > 0 ? metricas[metricas.length - 1] : null;
 
-  const igSeries = metricas.map((m) => m.instagram_followers ?? 0);
-  const tkSeries = metricas.map((m) => m.tiktok_followers ?? 0);
-  const chartLabels = metricas.map((m) => fmtMonth(m.reference_month));
+  // ── Derivações ──
+  const igFollowers = m?.instagram_followers ?? 0;
+  const tkFollowers = m?.tiktok_followers ?? 0;
+  const alcanceCombinado = (m?.instagram_reach ?? 0) + (m?.tiktok_views ?? 0);
 
-  function growthPct(series: number[]) {
-    if (series.length < 2 || series[0] === 0) return null;
-    return ((series[series.length - 1] - series[0]) / series[0]) * 100;
-  }
-  const igGrowthPct = growthPct(igSeries);
-  const tkGrowthPct = tkSeries.some((v) => v > 0) ? growthPct(tkSeries) : null;
+  const nichoTags = splitNicho(influencer.nicho);
+  const bioParagrafos = influencer.biografia.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+  const primeiroNome = influencer.nome.split(" ")[0] || influencer.nome;
 
-  const periodoLabel =
-    metricas.length >= 2
-      ? `${fmtMonth(metricas[0].reference_month)}–${fmtMonth(metricas[metricas.length - 1].reference_month)}`
-      : null;
+  const whatsappDigits = influencer.contato.whatsapp.replace(/\D/g, "");
+  const whatsappUrl = whatsappDigits ? `https://wa.me/${whatsappDigits}` : "";
+  const emailUrl = influencer.contato.email ? `mailto:${influencer.contato.email}` : "";
 
-  const fadeUp = {
-    hidden: { opacity: 0, y: 32 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
-    },
-  };
+  // Sub-stats de performance (só renderiza os > 0)
+  const igPerf = [
+    { label: "Interações", n: m?.instagram_interactions ?? 0 },
+    { label: "Compartilhamentos", n: m?.instagram_shares ?? 0 },
+    { label: "Salvamentos", n: m?.instagram_saves ?? 0 },
+  ].filter((s) => s.n > 0);
+  const tkPerf = [
+    { label: "Interações", n: m?.tiktok_interactions ?? 0 },
+    { label: "Compartilhamentos", n: m?.tiktok_shares ?? 0 },
+    { label: "Salvamentos", n: m?.tiktok_saves ?? 0 },
+  ].filter((s) => s.n > 0);
 
-  const whatsappUrl = `https://wa.me/${influencer.contato.whatsapp.replace(/\D/g, "")}`;
+  const igEng = m?.instagram_engagement ?? 0;
+  const tkEng = m?.tiktok_engagement ?? 0;
+  const showIgPerf = igEng > 0 || igPerf.length > 0;
+  const showTkPerf = tkEng > 0 || tkPerf.length > 0;
+  const showPerformance = showIgPerf || showTkPerf;
+
+  const showDemografia =
+    influencer.audienciaGenero.length > 0 ||
+    influencer.audienciaIdade.length > 0 ||
+    influencer.topEstados.length > 0;
+
+  const idadeColors = ["#FF9A86", "#FFB399", "#FFD6A6"];
+  const localColors = ["#FF9A86", "#FFB399", "#FFD6A6"];
 
   return (
-    <main className="min-h-screen bg-background py-12 px-4 selection:bg-primary selection:text-white flex flex-col items-center gap-12 text-foreground pb-32">
+    <div className="min-h-screen bg-[#faf9f6] text-slate-700 font-sans selection:bg-[#FF9A86] selection:text-white overflow-hidden">
 
-      {/* ─── FLOATING CTA (Sticky Button) ─────────────────────────────────────── */}
-      <motion.a
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Falar com ${influencer.nome} no WhatsApp`}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1, duration: 0.5 }}
-        className="fixed bottom-8 right-8 z-50 bg-primary text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 hover:scale-105 hover:bg-primary/90 transition-all"
+      {/* ── Hero ── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        className="relative px-8 pt-16 pb-20 md:px-16 lg:px-24 bg-[#F7F2EC] overflow-hidden"
       >
-        <MessageCircle className="w-5 h-5" aria-hidden />
-        <span className="font-bold text-sm tracking-wide">Falar no WhatsApp</span>
-      </motion.a>
+        <div className="absolute right-0 top-0 w-[500px] h-[500px] bg-gradient-to-bl from-[#FF9A86]/30 to-transparent rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute left-1/3 bottom-0 w-[300px] h-[300px] bg-gradient-to-tr from-[#FFD6A6]/20 to-transparent rounded-full blur-[80px] pointer-events-none" />
 
-      {/* ─── CARD PRINCIPAL ─────────────────────────────────────────────────────── */}
-      <div className="w-full max-w-4xl bg-card shadow-2xl p-6 md:p-16 relative overflow-hidden rounded-2xl flex flex-col gap-16 md:gap-24">
-        {/* Textura de papel sutil */}
-        <div
-          className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-multiply"
-          style={{ backgroundImage: NOISE_BG }}
-        />
+        <div className="max-w-7xl mx-auto relative z-10">
+          <motion.span
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="inline-flex items-center gap-2 text-[#FF9A86] text-xs font-medium tracking-widest uppercase mb-10 bg-[#FF9A86]/10 px-4 py-2 rounded-full"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FF9A86]" />
+            Mídia Kit
+          </motion.span>
 
-        {/* ── HERO + SOBRE + PÚBLICO + MÉTRICAS ──────────────────────────────── */}
-        <motion.div
-          initial={shouldReduceMotion ? false : "hidden"}
-          animate="visible"
-          variants={fadeUp}
-          className="grid md:grid-cols-12 gap-8 md:gap-12 relative z-10"
-        >
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            className="font-display italic font-light text-6xl md:text-8xl lg:text-9xl text-slate-800 leading-none mb-6"
+          >
+            {influencer.nome}
+          </motion.h1>
 
-          {/* Foto — coluna esquerda */}
-          <div className="md:col-span-5 md:col-start-1 md:row-start-1">
-            <div className="aspect-square md:aspect-[3/4] max-w-[280px] md:max-w-none mx-auto bg-muted relative overflow-hidden rounded-t-full shadow-inner">
-              <img
-                src={influencer.foto}
-                alt={`Foto de ${influencer.nome}`}
-                className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-              />
+          {(nichoTags.length > 0 || influencer.localizacao) && (
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="text-slate-500 text-base md:text-lg font-light mb-16 flex items-center gap-3 flex-wrap"
+            >
+              {nichoTags.map((tag, i) => (
+                <React.Fragment key={tag}>
+                  {i > 0 && <span className="w-1 h-1 rounded-full bg-slate-300" />}
+                  <span>{tag}</span>
+                </React.Fragment>
+              ))}
+              {influencer.localizacao && (
+                <span className="ml-4 flex items-center gap-1.5 text-slate-400">
+                  <MapPin className="w-3.5 h-3.5" /> {influencer.localizacao}
+                </span>
+              )}
+            </motion.p>
+          )}
+
+          {m && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-wrap gap-10 md:gap-20"
+            >
+              {igFollowers > 0 && (
+                <div>
+                  <p className="font-display italic font-light text-4xl md:text-5xl text-slate-800">
+                    <BigNumber n={igFollowers} />
+                  </p>
+                  <p className="text-xs text-slate-400 uppercase tracking-widest mt-1.5">Instagram</p>
+                </div>
+              )}
+              {tkFollowers > 0 && (
+                <div>
+                  <p className="font-display italic font-light text-4xl md:text-5xl text-slate-800">
+                    <BigNumber n={tkFollowers} />
+                  </p>
+                  <p className="text-xs text-slate-400 uppercase tracking-widest mt-1.5">TikTok</p>
+                </div>
+              )}
+              {alcanceCombinado > 0 && (
+                <div>
+                  <p className="font-display italic font-light text-4xl md:text-5xl text-[#FF9A86]">
+                    <BigNumber n={alcanceCombinado} suffixClassName="not-italic font-sans text-2xl" />
+                  </p>
+                  <p className="text-xs text-slate-400 uppercase tracking-widest mt-1.5">Alcance combinado</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* ── Bento Grid ── */}
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+        className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-6 lg:gap-8 p-4 md:p-8 lg:p-12"
+      >
+
+        {/* Profile & Contact */}
+        <motion.div variants={fadeUp} className="lg:col-span-3 flex flex-col gap-6">
+          {influencer.foto && (
+            <div className="bg-white rounded-3xl p-3 aspect-square shadow-sm border border-slate-100 relative group overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={influencer.foto} alt={`Foto de ${influencer.nome}`} className="absolute inset-3 w-[calc(100%-1.5rem)] h-[calc(100%-1.5rem)] object-cover rounded-[1.25rem] group-hover:scale-105 transition-transform duration-700" />
+            </div>
+          )}
+
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col gap-6 text-sm">
+            <h3 className="font-medium text-sm text-slate-400 uppercase tracking-widest">Contato</h3>
+
+            <div className="flex flex-col gap-5">
+              {influencer.redes.instagram && (
+                <a href={influencer.redes.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#FF9A86] group-hover:text-white transition-colors duration-300">
+                    <InstagramIcon className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-slate-400">Instagram</span>
+                    <span className="text-slate-700 font-medium group-hover:text-[#FF9A86] transition-colors">{influencer.handles.instagram || "Instagram"}</span>
+                  </div>
+                </a>
+              )}
+
+              {influencer.redes.tiktok && (
+                <a href={influencer.redes.tiktok} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-colors duration-300">
+                    <TikTokIcon className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-slate-400">TikTok</span>
+                    <span className="text-slate-700 font-medium group-hover:text-slate-900 transition-colors">{influencer.handles.tiktok || "TikTok"}</span>
+                  </div>
+                </a>
+              )}
+
+              {(influencer.contato.email || influencer.contato.whatsapp) && (
+                <div className="w-full h-px bg-slate-100 my-1" />
+              )}
+
+              {influencer.contato.email && (
+                <a href={emailUrl} className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#FFB399] group-hover:text-white transition-colors duration-300">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs text-slate-400">Email</span>
+                    <span className="text-xs text-slate-700 font-medium break-all">{influencer.contato.email}</span>
+                  </div>
+                </a>
+              )}
+
+              {influencer.contato.whatsapp && (
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#86efac] group-hover:text-white transition-colors duration-300">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-slate-400">WhatsApp</span>
+                    <span className="text-slate-700 font-medium">{fmtWhatsapp(influencer.contato.whatsapp)}</span>
+                  </div>
+                </a>
+              )}
             </div>
           </div>
+        </motion.div>
 
-          {/* Sobre — coluna direita */}
+        {/* Bio */}
+        <motion.div variants={fadeUp} className="lg:col-span-9 bg-white rounded-3xl p-10 lg:p-14 shadow-sm border border-slate-100 flex flex-col justify-center relative overflow-hidden">
           <motion.div
-            initial={shouldReduceMotion ? false : "hidden"}
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="md:col-span-7 md:col-start-6 md:row-start-1 text-center md:text-left"
-          >
-            <h1 className="font-display text-5xl md:text-7xl font-semibold tracking-tight text-foreground mb-4">
-              {influencer.nome}
-            </h1>
-            <p className="text-xs tracking-[0.2em] font-bold uppercase mb-6 text-primary">{influencer.nicho}</p>
-            <div className="space-y-4 text-base leading-relaxed text-muted-foreground">
-              <p>{influencer.biografia}</p>
+            animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute right-0 top-0 w-64 h-64 bg-gradient-to-bl from-[#FF9A86]/20 to-transparent rounded-full blur-3xl"
+          />
+          <div className="relative z-10">
+            <h2 className="font-display italic font-light text-3xl md:text-4xl lg:text-5xl text-slate-800 mb-6 leading-tight">
+              Muito prazer, sou a <span className="text-[#FF9A86]">{primeiroNome}!</span>
+            </h2>
+            <div className="text-base md:text-lg text-slate-500 leading-relaxed max-w-4xl font-light space-y-4">
+              {bioParagrafos.map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
             </div>
-          </motion.div>
+          </div>
+        </motion.div>
 
-          {/* Público-Alvo — coluna esquerda, linha 2 */}
+        {/* Instagram */}
+        {m && igFollowers > 0 && (
           <motion.div
-            initial={shouldReduceMotion ? false : "hidden"}
+            initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
             variants={fadeUp}
-            className="md:col-span-5 md:col-start-1 md:row-start-2"
+            className="lg:col-span-6 bg-[#FFF3F0] rounded-3xl p-10 shadow-sm border border-[#FFE4DE] relative group overflow-hidden"
           >
-            <h3 className="text-xs tracking-[0.2em] font-bold uppercase mb-6 border-b border-border pb-2 text-primary">
-              Público-Alvo
-            </h3>
+            <div className="absolute -right-10 -top-10 opacity-[0.06] group-hover:opacity-[0.09] transition-opacity duration-500">
+              <InstagramIcon className="w-64 h-64 text-[#FF9A86]" />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-12 h-12 rounded-2xl bg-[#FF9A86]/10 flex items-center justify-center text-[#FF9A86]">
+                  <InstagramIcon className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-medium text-slate-800 tracking-wide">Instagram</h2>
+              </div>
 
-            <div className="bg-muted/50 p-5 rounded-lg border border-border flex items-start gap-3">
-              <Users className="w-5 h-5 text-primary mt-0.5 shrink-0" aria-hidden />
-              <p className="text-base font-semibold text-foreground leading-snug">
-                {influencer.publicoAlvo}
-              </p>
+              <div className="mb-10">
+                <p className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-3">Seguidores</p>
+                <p className="font-display italic font-light text-5xl md:text-6xl text-slate-800">
+                  <BigNumber n={igFollowers} suffixClassName="not-italic font-sans text-3xl text-slate-400" />
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-50">
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Alcance (30d)</p>
+                  <p className="text-2xl font-light text-slate-700">
+                    {fmtCompact(m.instagram_reach ?? 0).value}
+                    <span className="text-lg text-slate-400">{fmtCompact(m.instagram_reach ?? 0).suffix}</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Impressões</p>
+                  <p className="text-2xl font-medium text-[#FF9A86]">
+                    {fmtCompact(m.instagram_impressions ?? 0).value}
+                    <span className="text-lg">{fmtCompact(m.instagram_impressions ?? 0).suffix}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* TikTok */}
+        {m && tkFollowers > 0 && (
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={fadeUp}
+            className="lg:col-span-6 bg-[#F4F4F6] rounded-3xl p-10 shadow-sm border border-[#E8E8EC] relative group overflow-hidden"
+          >
+            <div className="absolute -right-10 -top-10 opacity-[0.05] group-hover:opacity-[0.08] transition-opacity duration-500">
+              <TikTokIcon className="w-64 h-64 text-slate-500" />
+            </div>
+            <div className="absolute right-0 bottom-0 w-48 h-48 bg-gradient-to-tl from-[#FF9A86]/8 to-transparent rounded-full blur-2xl pointer-events-none" />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-12 h-12 rounded-2xl bg-slate-200/70 flex items-center justify-center text-slate-600">
+                  <TikTokIcon className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-medium text-slate-800 tracking-wide">TikTok</h2>
+              </div>
+
+              <div className="mb-10">
+                <p className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-3">Seguidores</p>
+                <p className="font-display italic font-light text-5xl md:text-6xl text-slate-800">
+                  <BigNumber n={tkFollowers} suffixClassName="not-italic font-sans text-3xl text-slate-400" />
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-200">
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Views médias</p>
+                  <p className="text-2xl font-light text-slate-700">
+                    {fmtCompact(m.tiktok_views ?? 0).value}
+                    <span className="text-lg text-slate-400">{fmtCompact(m.tiktok_views ?? 0).suffix}</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Curtidas</p>
+                  <p className="text-2xl font-medium text-[#FF9A86]">
+                    {fmtCompact(m.tiktok_likes ?? 0).value}
+                    <span className="text-lg">{fmtCompact(m.tiktok_likes ?? 0).suffix}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Performance & Engajamento */}
+        {showPerformance && (
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={fadeUp}
+            className="lg:col-span-12 bg-white rounded-3xl p-10 md:p-14 shadow-sm border border-slate-100 overflow-hidden"
+          >
+            <div className="mb-10">
+              <p className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-3">Últimos 30 dias</p>
+              <h2 className="font-display italic font-light text-3xl text-slate-800">
+                Performance <span className="text-[#FF9A86]">& Engajamento</span>
+              </h2>
             </div>
 
-            {influencer.topEstados?.length > 0 && (
-              <div className="mt-8">
-                <p className="text-xs uppercase tracking-wider text-primary mb-3 flex items-center gap-1.5 font-bold">
-                  <MapPin className="w-3.5 h-3.5" aria-hidden /> Top Estados
-                </p>
-                <div className="space-y-3">
-                  {influencer.topEstados.map((estado) => (
-                    <div key={estado.uf} className="bg-card p-3 rounded-lg border border-border">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-bold text-foreground">{estado.uf}</span>
-                        <span className="text-sm font-bold text-primary">{estado.pct}%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${estado.pct}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Redes Sociais & Métricas — coluna direita, linha 2 */}
-          {ultimaMetrica && (
-            <motion.div
-              initial={shouldReduceMotion ? false : "hidden"}
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              variants={fadeUp}
-              className="md:col-span-7 md:col-start-6 md:row-start-2 text-center md:text-left"
-            >
-              <h3 className="text-xs tracking-[0.2em] font-bold uppercase mb-8 border-b border-border pb-2 text-primary">
-                Redes Sociais
-              </h3>
-
-              {/* Seguidores */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 text-center mb-10">
-                <div className="bg-muted p-6 rounded-2xl flex flex-col items-center justify-center">
-                  <p className="font-display text-5xl font-semibold mb-2 text-foreground">
-                    {fmtNum(ultimaMetrica.instagram_followers ?? 0)}
-                  </p>
-                  <p className="text-xs tracking-widest uppercase text-primary font-bold flex items-center justify-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5" aria-hidden /> Instagram
-                  </p>
-                </div>
-                <div className="bg-muted p-6 rounded-2xl flex flex-col items-center justify-center">
-                  <p className="font-display text-5xl font-semibold mb-2 text-foreground">
-                    {fmtNum(ultimaMetrica.tiktok_followers ?? 0)}
-                  </p>
-                  <p className="text-xs tracking-widest uppercase text-primary font-bold flex items-center justify-center gap-1.5">
-                    <Video className="w-3.5 h-3.5" aria-hidden /> TikTok
-                  </p>
-                </div>
-              </div>
-
-              {/* Gráfico de crescimento */}
-              {igSeries.length >= 2 && (
-                <div className="mb-10 bg-muted/50 border border-border rounded-2xl p-5 text-left">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between mb-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-primary font-bold">Crescimento de Seguidores</p>
-                      {periodoLabel && (
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mt-0.5">{periodoLabel}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {igGrowthPct !== null && (
-                        <span className="flex items-center gap-1 text-sm font-bold text-success">
-                          <TrendingUp className="w-3.5 h-3.5" aria-hidden />
-                          IG {igGrowthPct >= 0 ? "+" : ""}{igGrowthPct.toFixed(1)}%
-                        </span>
-                      )}
-                      {tkGrowthPct !== null && (
-                        <span className="flex items-center gap-1 text-sm font-bold" style={{ color: TK_COLOR }}>
-                          <TrendingUp className="w-3.5 h-3.5" aria-hidden />
-                          TK {tkGrowthPct >= 0 ? "+" : ""}{tkGrowthPct.toFixed(1)}%
-                        </span>
-                      )}
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:divide-x divide-slate-50">
+              {showIgPerf && (
+                <div className="space-y-8">
+                  <div className="flex items-center gap-3">
+                    <InstagramIcon className="w-4 h-4 text-[#FF9A86]" />
+                    <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">Instagram</span>
                   </div>
-                  <GrowthChart ig={igSeries} tk={tkSeries} labels={chartLabels} />
+
+                  {igEng > 0 && (
+                    <div className="flex items-end gap-4">
+                      <p className="font-display italic font-light text-6xl text-slate-800"><AnimatedNumber value={igEng} decimals={1} /></p>
+                      <div className="mb-3">
+                        <p className="text-2xl font-light text-slate-400">%</p>
+                        <p className="text-xs text-slate-400 mt-0.5">taxa de engajamento</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {igPerf.length > 0 && (
+                    <div className="grid grid-cols-3 gap-6 pt-8 border-t border-slate-50">
+                      {igPerf.map((s) => (
+                        <div key={s.label}>
+                          <p className="text-xs text-slate-400 mb-2">{s.label}</p>
+                          <p className="text-xl font-light text-slate-700">
+                            {fmtCompact(s.n).value}<span className="text-sm text-slate-400">{fmtCompact(s.n).suffix}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
-            </motion.div>
-          )}
+              {showTkPerf && (
+                <div className="space-y-8 lg:pl-10">
+                  <div className="flex items-center gap-3">
+                    <TikTokIcon className="w-4 h-4 text-slate-700" />
+                    <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">TikTok</span>
+                  </div>
 
-          {/* Stats Cards — linha 3, span 12 colunas para evitar espaço vazio no desktop */}
-          {ultimaMetrica && (
-            <div className="md:col-span-12 grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { value: `${ultimaMetrica.instagram_engagement ?? 0}%`, label: "Engajamento", sub: "Instagram", note: null },
-                { value: fmtNum(ultimaMetrica.instagram_reach ?? 0), label: "Alcance mensal", sub: "Instagram", note: null },
-                { value: fmtNum(ultimaMetrica.tiktok_views ?? 0), label: "Views médias", sub: "TikTok", note: null },
-                { value: `${ultimaMetrica.tiktok_engagement ?? 0}%`, label: "Engajamento", sub: "TikTok", note: null },
-              ].map((stat, i) => (
-                <div key={i} className="bg-card border border-border rounded-xl p-4 flex flex-col gap-1">
-                  <p className="font-bold text-2xl text-foreground tracking-tight">{stat.value}</p>
-                  <p className="text-xs font-semibold text-foreground">{stat.label}</p>
-                  <p className="text-xs text-primary font-medium">{stat.sub}</p>
-                  {stat.note && <p className="text-[11px] text-muted-foreground mt-0.5">{stat.note}</p>}
+                  {tkEng > 0 && (
+                    <div className="flex items-end gap-4">
+                      <p className="font-display italic font-light text-6xl text-slate-800"><AnimatedNumber value={tkEng} decimals={1} /></p>
+                      <div className="mb-3">
+                        <p className="text-2xl font-light text-slate-400">%</p>
+                        <p className="text-xs text-slate-400 mt-0.5">taxa de engajamento</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {tkPerf.length > 0 && (
+                    <div className="grid grid-cols-3 gap-6 pt-8 border-t border-slate-50">
+                      {tkPerf.map((s) => (
+                        <div key={s.label}>
+                          <p className="text-xs text-slate-400 mb-2">{s.label}</p>
+                          <p className="text-xl font-light text-slate-700">
+                            {fmtCompact(s.n).value}<span className="text-sm text-slate-400">{fmtCompact(s.n).suffix}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </motion.div>
-
-        {/* ── MOODBOARD ─────────────────────────────────────────────────────────── */}
-        {influencer.moodboard?.length >= 3 && (
-          <motion.div
-            initial={shouldReduceMotion ? false : "hidden"}
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={fadeUp}
-            className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6"
-          >
-            <div className="aspect-square md:aspect-[4/5] bg-muted md:mt-8 rounded-2xl overflow-hidden shadow-md">
-              <img src={influencer.moodboard[0]} alt="Foto de conteúdo 1" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
-            </div>
-            <div className="aspect-square bg-muted rounded-2xl overflow-hidden shadow-md">
-              <img src={influencer.moodboard[1]} alt="Foto de conteúdo 2" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
-            </div>
-            <div className="aspect-square md:aspect-[4/5] bg-muted md:mt-16 rounded-2xl overflow-hidden shadow-md">
-              <img src={influencer.moodboard[2]} alt="Foto de conteúdo 3" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
+              )}
             </div>
           </motion.div>
         )}
 
-        {/* ── FORMATOS DISPONÍVEIS ───────────────────────────────────────────────── */}
-        <motion.div
-          initial={shouldReduceMotion ? undefined : "hidden"}
-          whileInView={shouldReduceMotion ? undefined : "visible"}
-          viewport={{ once: true, margin: "-100px" }}
-          variants={shouldReduceMotion ? {} : fadeUp}
-          className="relative z-10"
-        >
-          <h2 className="font-display text-4xl md:text-5xl font-semibold tracking-tight mb-8 text-foreground text-center">
-            Formatos Disponíveis
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-            {influencer.formatos.map((f, i) => (
-              <div key={i} className="bg-muted/50 border border-border rounded-xl p-5">
-                <p className="font-bold text-foreground mb-1">{f.nome}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.descricao}</p>
+        {/* Fotos Grid com Parallax */}
+        {influencer.moodboard.length >= 3 && (
+          <motion.div
+            ref={containerRef}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={staggerContainer}
+            className="lg:col-span-12 py-12 md:py-24 relative"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              <motion.div style={{ y: y1 }} variants={fadeUp} className="relative aspect-square md:aspect-[4/5] bg-slate-100 md:mt-8 rounded-[2rem] overflow-hidden shadow-md group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={influencer.moodboard[0]} alt="Foto de conteúdo 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              </motion.div>
+              <motion.div style={{ y: y2 }} variants={fadeUp} className="relative aspect-square bg-slate-100 rounded-[2rem] overflow-hidden shadow-md group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={influencer.moodboard[1]} alt="Foto de conteúdo 2" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              </motion.div>
+              <motion.div style={{ y: y3 }} variants={fadeUp} className="relative aspect-square md:aspect-[4/5] bg-slate-100 md:mt-16 rounded-[2rem] overflow-hidden shadow-md group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={influencer.moodboard[2]} alt="Foto de conteúdo 3" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Demografia e Público-Alvo */}
+        {showDemografia && (
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={fadeUp}
+            className="lg:col-span-12 bg-white rounded-3xl p-10 md:p-16 shadow-sm border border-slate-100 mt-4 relative overflow-hidden"
+          >
+            <div className="flex flex-col lg:flex-row gap-16 lg:gap-16">
+              <div className="lg:w-1/4 flex flex-col justify-center">
+                <h2 className="font-display italic font-light text-3xl text-slate-800 mb-6">
+                  Público <span className="text-[#FF9A86]">Alvo</span>
+                </h2>
+                <p className="text-slate-500 text-sm leading-relaxed">{influencer.publicoAlvo}</p>
               </div>
-            ))}
-          </div>
-        </motion.div>
 
-        {/* ── CASES / RESULTADOS ─────────────────────────────────────────────────── */}
-        {influencer.cases?.length > 0 && (
+              <div className="lg:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-10">
+                {/* Gênero */}
+                {influencer.audienciaGenero.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 mb-8 flex items-center gap-3 uppercase tracking-widest">
+                      <Users className="w-4 h-4 text-[#FF9A86]" /> Gênero
+                    </h3>
+                    <div className="space-y-6">
+                      {influencer.audienciaGenero.map((g, i) => (
+                        <div key={g.label}>
+                          <div className="flex justify-between text-xs mb-3">
+                            <span className="font-medium text-slate-600">{g.label}</span>
+                            <span className="font-semibold text-slate-800">{g.pct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-50 rounded-full h-2.5 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              whileInView={{ width: `${g.pct}%` }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 1.2, delay: 0.2 + i * 0.2, ease: "easeOut" }}
+                              className="h-2.5 rounded-full"
+                              style={{ background: i === 0 ? "#FF9A86" : "#cbd5e1" }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Faixa Etária */}
+                {influencer.audienciaIdade.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-400 mb-8 flex items-center gap-3 uppercase tracking-widest">
+                      <Users className="w-4 h-4 text-[#FF9A86]" /> Faixa Etária
+                    </h3>
+                    <div className="space-y-6">
+                      {influencer.audienciaIdade.map((f, i) => (
+                        <div key={f.faixa}>
+                          <div className="flex justify-between text-xs mb-3">
+                            <span className="font-medium text-slate-600">{f.faixa}</span>
+                            <span className="font-semibold text-slate-800">{f.pct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-50 rounded-full h-2.5 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              whileInView={{ width: `${f.pct}%` }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 1, delay: 0.2 + i * 0.2, ease: "easeOut" }}
+                              className="h-2.5 rounded-full"
+                              style={{ background: idadeColors[i % idadeColors.length] }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Localização */}
+                {influencer.topEstados.length > 0 && (
+                  <motion.div
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    variants={staggerContainer}
+                  >
+                    <h3 className="text-xs font-semibold text-slate-400 mb-8 flex items-center gap-3 uppercase tracking-widest">
+                      <MapPin className="w-4 h-4 text-[#FF9A86]" /> Localização
+                    </h3>
+                    <div className="space-y-5">
+                      {influencer.topEstados.map((estado, i) => (
+                        <React.Fragment key={estado.uf}>
+                          {i > 0 && <div className="w-full h-px bg-slate-50" />}
+                          <motion.div variants={fadeUp} className="flex items-center gap-5">
+                            <div className="font-medium text-xs tracking-widest" style={{ color: localColors[i % localColors.length] }}>
+                              {String(i + 1).padStart(2, "0")}
+                            </div>
+                            <div className="flex-1"><p className="font-medium text-sm text-slate-700">{estado.uf}</p></div>
+                            <div className="text-xs font-semibold text-slate-500">{estado.pct}%</div>
+                          </motion.div>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Formatos & Entregas */}
+        {influencer.formatos.length > 0 && (
           <motion.div
-            initial={shouldReduceMotion ? false : "hidden"}
+            initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={fadeUp}
-            className="relative z-10"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={staggerContainer}
+            className="lg:col-span-12 mt-4"
           >
-            <h2 className="font-display text-4xl md:text-5xl font-semibold tracking-tight text-foreground text-center mb-8">
-              Casos de Sucesso
-            </h2>
-            <div className="grid md:grid-cols-3 gap-4">
+            <motion.div variants={fadeUp} className="mb-10">
+              <p className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-3">O que posso entregar</p>
+              <h2 className="font-display italic font-light text-3xl text-slate-800">
+                Formatos <span className="text-[#FF9A86]">& Entregas</span>
+              </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {influencer.formatos.map((f, i) => {
+                const Icon = FORMAT_ICONS[i % FORMAT_ICONS.length];
+                return (
+                  <motion.div
+                    key={i}
+                    variants={fadeUp}
+                    className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm group hover:border-[#FF9A86]/30 hover:shadow-md transition-all duration-300 flex flex-col gap-4"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#FF9A86]/10 group-hover:text-[#FF9A86] transition-colors duration-300">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800 text-sm mb-1.5">{f.nome}</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">{f.descricao}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Cases / Resultados */}
+        {influencer.cases.length > 0 && (
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={staggerContainer}
+            className="lg:col-span-12 mt-4"
+          >
+            <motion.div variants={fadeUp} className="mb-10">
+              <p className="text-xs text-slate-400 uppercase tracking-widest font-medium mb-3">Resultados que entreguei</p>
+              <h2 className="font-display italic font-light text-3xl text-slate-800">
+                Casos de <span className="text-[#FF9A86]">Sucesso</span>
+              </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
               {influencer.cases.map((c, i) => (
-                <div key={i} className="bg-muted/50 border border-border rounded-xl p-6 flex flex-col gap-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">{c.marca}</p>
-                  <p className="font-display text-2xl font-semibold text-foreground leading-snug">{c.resultado}</p>
-                  <p className="text-xs text-muted-foreground mt-auto">{c.periodo}</p>
-                </div>
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm flex flex-col gap-4 group hover:border-[#FF9A86]/30 hover:shadow-md transition-all duration-300"
+                >
+                  <div className="text-[#FF9A86] font-medium text-xs tracking-widest uppercase">{c.marca}</div>
+                  <p className="font-display italic font-light text-2xl text-slate-800 leading-snug">{c.resultado}</p>
+                  <p className="text-xs text-slate-400 mt-auto">{c.periodo}</p>
+                </motion.div>
               ))}
             </div>
           </motion.div>
         )}
 
-        {/* ── CONTATO ───────────────────────────────────────────────────────────── */}
-        <motion.div
-          id="contato"
-          initial={shouldReduceMotion ? false : "hidden"}
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-          variants={fadeUp}
-          className="relative z-10 text-center border-t border-border pt-16"
-        >
-          <h2 className="font-display text-4xl font-semibold tracking-tight mb-8 text-foreground">Contato</h2>
+        {/* CTA Final */}
+        {(influencer.contato.email || influencer.contato.whatsapp) && (
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={fadeUp}
+            className="lg:col-span-12 bg-[#FF9A86] rounded-3xl p-12 md:p-16 mt-4 relative overflow-hidden"
+          >
+            <div className="absolute right-0 top-0 w-80 h-80 bg-white/10 rounded-full blur-[80px] pointer-events-none" />
+            <div className="absolute left-1/2 bottom-0 w-60 h-60 bg-[#FF7A60]/30 rounded-full blur-[60px] pointer-events-none" />
 
-          {/* Dados visíveis */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mb-8 text-sm text-foreground font-medium">
-            {influencer.contato.email && (
-              <span className="bg-muted px-4 py-2 rounded-full text-foreground">{influencer.contato.email}</span>
-            )}
-            {influencer.contato.whatsapp && (
-              <span className="bg-muted px-4 py-2 rounded-full text-foreground">{fmtWhatsapp(influencer.contato.whatsapp)}</span>
-            )}
-          </div>
+            <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-10">
+              <div>
+                <p className="text-white/70 text-xs uppercase tracking-widest font-medium mb-4">Vamos trabalhar juntos?</p>
+                <h2 className="font-display italic font-light text-4xl md:text-5xl lg:text-6xl text-white leading-tight">
+                  Pronta para criar<br />algo incrível.
+                </h2>
+              </div>
 
-          {/* Links */}
-          <div className="flex flex-wrap justify-center gap-4 text-xs tracking-widest uppercase text-primary font-bold">
-            <a
-              href={influencer.redes.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors bg-muted px-6 py-3 rounded-full flex items-center gap-2"
-            >
-              <Camera className="w-4 h-4" aria-hidden /> Instagram
-            </a>
-            <a
-              href={influencer.redes.tiktok}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors bg-muted px-6 py-3 rounded-full flex items-center gap-2"
-            >
-              <Video className="w-4 h-4" aria-hidden /> TikTok
-            </a>
-            <a
-              href={`mailto:${influencer.contato.email}`}
-              className="hover:text-foreground transition-colors bg-muted px-6 py-3 rounded-full"
-            >
-              E-mail Comercial
-            </a>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors bg-muted px-6 py-3 rounded-full"
-            >
-              WhatsApp Direto
-            </a>
-          </div>
-        </motion.div>
+              <div className="flex flex-col gap-5 lg:text-right">
+                {influencer.contato.email && (
+                  <a href={emailUrl} className="flex items-center gap-4 group lg:flex-row-reverse">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white group-hover:bg-white group-hover:text-[#FF9A86] transition-colors duration-300">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <span className="text-white font-medium">{influencer.contato.email}</span>
+                  </a>
+                )}
+                {influencer.contato.whatsapp && (
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group lg:flex-row-reverse">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white group-hover:bg-white group-hover:text-[#FF9A86] transition-colors duration-300">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <span className="text-white font-medium">{fmtWhatsapp(influencer.contato.whatsapp)}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
 
-      </div>
-    </main>
+        <div className="lg:col-span-12 h-8" />
+      </motion.div>
+    </div>
   );
 }

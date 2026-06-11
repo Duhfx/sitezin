@@ -28,10 +28,16 @@ export async function salvarMetricas(formData: FormData) {
     instagram_reach: parseNum(formData.get("instagram_reach")),
     instagram_impressions: parseNum(formData.get("instagram_impressions")),
     instagram_engagement: parseNum(formData.get("instagram_engagement")),
+    instagram_interactions: parseNum(formData.get("instagram_interactions")),
+    instagram_shares: parseNum(formData.get("instagram_shares")),
+    instagram_saves: parseNum(formData.get("instagram_saves")),
     tiktok_followers: parseNum(formData.get("tiktok_followers")),
     tiktok_views: parseNum(formData.get("tiktok_views")),
     tiktok_likes: parseNum(formData.get("tiktok_likes")),
     tiktok_engagement: parseNum(formData.get("tiktok_engagement")),
+    tiktok_interactions: parseNum(formData.get("tiktok_interactions")),
+    tiktok_shares: parseNum(formData.get("tiktok_shares")),
+    tiktok_saves: parseNum(formData.get("tiktok_saves")),
   });
 
   if (error) {
@@ -59,10 +65,16 @@ export async function editarMetricas(id: string, formData: FormData) {
       instagram_reach: parseNum(formData.get("instagram_reach")),
       instagram_impressions: parseNum(formData.get("instagram_impressions")),
       instagram_engagement: parseNum(formData.get("instagram_engagement")),
+      instagram_interactions: parseNum(formData.get("instagram_interactions")),
+      instagram_shares: parseNum(formData.get("instagram_shares")),
+      instagram_saves: parseNum(formData.get("instagram_saves")),
       tiktok_followers: parseNum(formData.get("tiktok_followers")),
       tiktok_views: parseNum(formData.get("tiktok_views")),
       tiktok_likes: parseNum(formData.get("tiktok_likes")),
       tiktok_engagement: parseNum(formData.get("tiktok_engagement")),
+      tiktok_interactions: parseNum(formData.get("tiktok_interactions")),
+      tiktok_shares: parseNum(formData.get("tiktok_shares")),
+      tiktok_saves: parseNum(formData.get("tiktok_saves")),
     })
     .eq("id", id);
 

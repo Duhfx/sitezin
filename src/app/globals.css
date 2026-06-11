@@ -8,33 +8,33 @@
 ───────────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    /* Emerald/Mint Green Premium Light Mode */
-    --background: 150 20% 97%; /* Soft off-white to contrast with the cards */
-    --foreground: 150 15% 15%; /* Deep green-gray for solid readability */
+    /* Coral / Peach Premium Light Mode — paleta do mídia kit (/media-kit) */
+    --background: 36 33% 98%; /* Warm off-white (#faf9f6) */
+    --foreground: 215 22% 22%; /* Slate escuro para leitura sólida */
 
-    --card: 0 0% 100%; /* Pure white to make the coupon cards pop */
-    --card-foreground: 150 15% 15%;
+    --card: 0 0% 100%; /* Branco puro para destacar os cards */
+    --card-foreground: 215 22% 22%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 150 5% 20%;
+    --popover-foreground: 215 20% 25%;
 
-    --primary: 150 60% 45%;
+    --primary: 10 100% 76%; /* Coral da marca (#FF9A86) */
     --primary-foreground: 0 0% 100%;
 
-    --accent-2: 173 68% 42%; /* Teal da marca — par do primary nos gradientes */
+    --accent-2: 30 100% 78%; /* Pêssego — par do coral nos gradientes (#FFB399) */
 
-    --secondary: 150 20% 96%;
-    --secondary-foreground: 150 40% 25%;
+    --secondary: 32 35% 96%;
+    --secondary-foreground: 215 22% 28%;
 
-    --muted: 150 15% 97%; /* Very soft gray-green */
-    --muted-foreground: 150 5% 45%;
+    --muted: 32 25% 96%; /* Bege muito suave */
+    --muted-foreground: 215 12% 50%;
 
-    --accent: 150 20% 96%;
-    --accent-foreground: 150 40% 25%;
+    --accent: 22 80% 95%; /* Tom coral claro para hovers */
+    --accent-foreground: 10 65% 45%;
 
-    --border: 150 15% 92%; /* Very subtle borders */
-    --input: 150 15% 92%;
-    --ring: 150 60% 45%;
+    --border: 32 18% 91%; /* Bordas suaves e quentes */
+    --input: 32 18% 91%;
+    --ring: 10 100% 76%;
 
     --success: 145 50% 40%;
     --success-foreground: 0 0% 100%;

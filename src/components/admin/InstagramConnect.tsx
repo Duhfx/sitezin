@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InstagramSyncButton from "@/components/admin/InstagramSyncButton";
 
 type Props = {
   username: string | null;
@@ -48,12 +49,15 @@ export default function InstagramConnect({
           )}
         </div>
 
-        <Link
-          href="/api/auth/meta"
-          className="rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
-        >
-          {isConnected ? "Reconectar" : "Conectar"}
-        </Link>
+        <div className="flex items-center gap-2">
+          {isConnected && <InstagramSyncButton />}
+          <Link
+            href="/api/auth/meta"
+            className="rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          >
+            {isConnected ? "Reconectar" : "Conectar"}
+          </Link>
+        </div>
       </div>
 
       {isConnected && (
