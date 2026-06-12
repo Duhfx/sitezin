@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { fetchInstagramData, type SyncStep } from "@/lib/instagram-sync";
+import { fetchTiktokData, refreshTiktokToken, TiktokAuthError } from "@/lib/tiktok-sync";
 import type {
   AudienciaGenero,
   AudienciaIdade,
@@ -281,39 +282,180 @@ export async function salvarSincronizacao(payload: SyncPayload) {
   }
 
   // Métricas: upsert da linha do mês corrente (só os campos do Instagram).
-  if (payload.metrics && Object.keys(payload.metrics).length > 0) {
-    const now = new Date();
-    const mesRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  await upsertMetricsDoMes(supabase, payload.metrics);
 
-    const { data: existente } = await supabase
-      .from("influencer_metrics")
-      .select("id")
-      .eq("reference_month", mesRef)
-      .maybeSingle();
+  revalidatePath("/admin/perfil");
+  return { ok: true };
+}
 
-    if (existente) {
-      await supabase.from("influencer_metrics").update(payload.metrics).eq("id", existente.id);
-    } else {
-      await supabase.from("influencer_metrics").insert({
-        reference_month: mesRef,
-        instagram_followers: 0,
-        instagram_reach: 0,
-        instagram_impressions: 0,
-        instagram_engagement: 0,
-        instagram_interactions: 0,
-        instagram_shares: 0,
-        instagram_saves: 0,
-        tiktok_followers: 0,
-        tiktok_views: 0,
-        tiktok_likes: 0,
-        tiktok_engagement: 0,
-        tiktok_interactions: 0,
-        tiktok_shares: 0,
-        tiktok_saves: 0,
-        ...payload.metrics,
-      });
+// Upsert da linha de métricas do mês corrente, gravando só os campos informados
+// (preserva o que já existe na linha — IG e TikTok sincronizam de forma independente).
+async function upsertMetricsDoMes(supabase: Client, metrics: SyncPayload["metrics"]) {
+  if (!metrics || Object.keys(metrics).length === 0) return;
+
+  const now = new Date();
+  const mesRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+  const { data: existente } = await supabase
+    .from("influencer_metrics")
+    .select("id")
+    .eq("reference_month", mesRef)
+    .maybeSingle();
+
+  if (existente) {
+    await supabase.from("influencer_metrics").update(metrics).eq("id", existente.id);
+  } else {
+    await supabase.from("influencer_metrics").insert({
+      reference_month: mesRef,
+      instagram_followers: 0,
+      instagram_reach: 0,
+      instagram_impressions: 0,
+      instagram_engagement: 0,
+      instagram_interactions: 0,
+      instagram_shares: 0,
+      instagram_saves: 0,
+      tiktok_followers: 0,
+      tiktok_views: 0,
+      tiktok_likes: 0,
+      tiktok_engagement: 0,
+      tiktok_interactions: 0,
+      tiktok_shares: 0,
+      tiktok_saves: 0,
+      ...metrics,
+    });
+  }
+}
+
+// ── Sincronização sob demanda com a Display API do TikTok ───────────────────────
+// Passo 1: garante token válido (refresh se preciso), busca dados e monta o preview.
+export async function sincronizarTiktok(): Promise<SyncResult> {
+  const supabase = await createClient();
+
+  const { data: perfil } = await supabase
+    .from("influencer_profile")
+    .select(
+      "tiktok_access_token, tiktok_refresh_token, tiktok_token_expires_at, tiktok_refresh_expires_at",
+    )
+    .eq("id", PROFILE_ID)
+    .maybeSingle();
+
+  if (!perfil?.tiktok_refresh_token) {
+    return { ok: false, error: "TikTok não está conectado. Conecte a conta primeiro." };
+  }
+  if (
+    perfil.tiktok_refresh_expires_at &&
+    new Date(perfil.tiktok_refresh_expires_at) < new Date()
+  ) {
+    return { ok: false, error: "A conexão com o TikTok expirou. Clique em Reconectar." };
+  }
+
+  // Token de acesso vale ~24h; renova quando ausente ou prestes a expirar (buffer 60s).
+  let accessToken = perfil.tiktok_access_token ?? "";
+  const expiraEm = perfil.tiktok_token_expires_at
+    ? new Date(perfil.tiktok_token_expires_at).getTime()
+    : 0;
+  if (!accessToken || expiraEm <= Date.now() + 60_000) {
+    try {
+      const tokens = await refreshTiktokToken(perfil.tiktok_refresh_token);
+      accessToken = tokens.accessToken;
+      await supabase
+        .from("influencer_profile")
+        .update({
+          tiktok_access_token: tokens.accessToken,
+          tiktok_refresh_token: tokens.refreshToken,
+          tiktok_token_expires_at: tokens.expiresAt,
+          tiktok_refresh_expires_at: tokens.refreshExpiresAt,
+        })
+        .eq("id", PROFILE_ID);
+    } catch (e) {
+      if (e instanceof TiktokAuthError) {
+        return { ok: false, error: "A conexão com o TikTok expirou. Clique em Reconectar." };
+      }
+      return { ok: false, error: "Não foi possível renovar a conexão com o TikTok." };
     }
   }
+
+  const dados = await fetchTiktokData(accessToken);
+
+  if (dados.authError) {
+    return {
+      ok: false,
+      error: "A conexão com o TikTok expirou. Clique em Reconectar.",
+      steps: dados.steps,
+    };
+  }
+  if (!dados.perfil && !dados.media) {
+    return {
+      ok: false,
+      error: "Não foi possível obter dados do TikTok. Veja os detalhes abaixo.",
+      steps: dados.steps,
+    };
+  }
+
+  const grupos: SyncGrupo[] = [];
+  const perfilUpdate: Partial<InfluencerProfile> = {};
+  const tkPartial: Partial<InfluencerMetrics> = {};
+
+  if (dados.perfil) {
+    perfilUpdate.tiktok_username = dados.perfil.username;
+    perfilUpdate.tiktok_followers = dados.perfil.followers;
+    perfilUpdate.tiktok_likes = dados.perfil.likes;
+    perfilUpdate.tiktok_videos = dados.perfil.videos;
+    tkPartial.tiktok_followers = dados.perfil.followers;
+    grupos.push({
+      titulo: "Perfil",
+      descricao: "Valores atuais da conta",
+      itens: [
+        { label: "Seguidores", valor: fmtBR(dados.perfil.followers) },
+        { label: "Curtidas (total)", valor: fmtBR(dados.perfil.likes), hint: "Curtidas acumuladas em toda a conta (vitalício)" },
+        { label: "Vídeos", valor: fmtBR(dados.perfil.videos) },
+      ],
+    });
+  }
+
+  if (dados.media) {
+    tkPartial.tiktok_views = dados.media.views;
+    tkPartial.tiktok_likes = dados.media.likes;
+    tkPartial.tiktok_shares = dados.media.shares;
+    tkPartial.tiktok_interactions = dados.media.interactions;
+    tkPartial.tiktok_engagement = dados.media.engagement;
+    grupos.push({
+      titulo: "Publicações",
+      descricao: `Agregado dos vídeos dos últimos 30 dias${dados.media.videos ? ` · ${dados.media.videos} vídeo(s)` : ""}`,
+      itens: [
+        { label: "Visualizações", valor: fmtBR(dados.media.views), hint: "Soma das views dos vídeos do período" },
+        { label: "Curtidas", valor: fmtBR(dados.media.likes), hint: "Soma das curtidas dos vídeos do período" },
+        { label: "Compartilhamentos", valor: fmtBR(dados.media.shares), hint: "Soma dos compartilhamentos dos vídeos do período" },
+        { label: "Interações", valor: fmtBR(dados.media.interactions), hint: "Curtidas + comentários + compartilhamentos dos vídeos do período" },
+        { label: "Engajamento", valor: `${dados.media.engagement}%`, hint: "Calculado: interações ÷ visualizações × 100" },
+      ],
+    });
+  }
+
+  return {
+    ok: true,
+    steps: dados.steps,
+    grupos,
+    payload: {
+      perfil: Object.keys(perfilUpdate).length > 0 ? perfilUpdate : null,
+      metrics: Object.keys(tkPartial).length > 0 ? tkPartial : null,
+    },
+  };
+}
+
+// Passo 2: grava no banco o payload confirmado no modal (carimbo tiktok_synced_at).
+export async function salvarSincronizacaoTiktok(payload: SyncPayload) {
+  const supabase = await createClient();
+
+  if (payload.perfil) {
+    const { error } = await supabase
+      .from("influencer_profile")
+      .update({ ...payload.perfil, tiktok_synced_at: new Date().toISOString() })
+      .eq("id", PROFILE_ID);
+    if (error) return { ok: false, error: "Erro ao salvar os dados do perfil." };
+  }
+
+  await upsertMetricsDoMes(supabase, payload.metrics);
 
   revalidatePath("/admin/perfil");
   return { ok: true };

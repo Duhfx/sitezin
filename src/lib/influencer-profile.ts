@@ -35,6 +35,16 @@ export function profileFromConfig(): InfluencerProfile {
     instagram_followers: null,
     instagram_posts: null,
     instagram_synced_at: null,
+    tiktok_access_token: null,
+    tiktok_refresh_token: null,
+    tiktok_token_expires_at: null,
+    tiktok_refresh_expires_at: null,
+    tiktok_open_id: null,
+    tiktok_username: null,
+    tiktok_followers: null,
+    tiktok_likes: null,
+    tiktok_videos: null,
+    tiktok_synced_at: null,
   };
 }
 

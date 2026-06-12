@@ -128,6 +128,16 @@ export type Database = {
           instagram_followers: number | null;
           instagram_posts: number | null;
           instagram_synced_at: string | null;
+          tiktok_access_token: string | null;
+          tiktok_refresh_token: string | null;
+          tiktok_token_expires_at: string | null;
+          tiktok_refresh_expires_at: string | null;
+          tiktok_open_id: string | null;
+          tiktok_username: string | null;
+          tiktok_followers: number | null;
+          tiktok_likes: number | null;
+          tiktok_videos: number | null;
+          tiktok_synced_at: string | null;
         };
         Insert: Omit<
           Database["public"]["Tables"]["influencer_profile"]["Row"],
@@ -141,6 +151,16 @@ export type Database = {
           | "instagram_followers"
           | "instagram_posts"
           | "instagram_synced_at"
+          | "tiktok_access_token"
+          | "tiktok_refresh_token"
+          | "tiktok_token_expires_at"
+          | "tiktok_refresh_expires_at"
+          | "tiktok_open_id"
+          | "tiktok_username"
+          | "tiktok_followers"
+          | "tiktok_likes"
+          | "tiktok_videos"
+          | "tiktok_synced_at"
         > & {
           id?: string;
           updated_at?: string;
@@ -152,6 +172,16 @@ export type Database = {
           instagram_followers?: number | null;
           instagram_posts?: number | null;
           instagram_synced_at?: string | null;
+          tiktok_access_token?: string | null;
+          tiktok_refresh_token?: string | null;
+          tiktok_token_expires_at?: string | null;
+          tiktok_refresh_expires_at?: string | null;
+          tiktok_open_id?: string | null;
+          tiktok_username?: string | null;
+          tiktok_followers?: number | null;
+          tiktok_likes?: number | null;
+          tiktok_videos?: number | null;
+          tiktok_synced_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["influencer_profile"]["Insert"]>;
         Relationships: [];

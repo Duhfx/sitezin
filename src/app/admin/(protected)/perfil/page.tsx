@@ -3,13 +3,14 @@ import PerfilForm from "@/components/admin/PerfilForm";
 import PerfilTabs from "@/components/admin/PerfilTabs";
 import MetricasPanel, { type MetricaRow } from "@/components/admin/MetricasPanel";
 import InstagramConnect from "@/components/admin/InstagramConnect";
+import TiktokConnect from "@/components/admin/TiktokConnect";
 import { PROFILE_ID, profileFromConfig } from "@/lib/influencer-profile";
 import type { InfluencerProfile } from "@/types/database";
 
 export default async function PerfilPage({
   searchParams,
 }: {
-  searchParams?: { tab?: string; instagram?: string };
+  searchParams?: { tab?: string; instagram?: string; tiktok?: string };
 }) {
   const supabase = await createClient();
 
@@ -28,6 +29,7 @@ export default async function PerfilPage({
 
   const defaultTab = searchParams?.tab === "metricas" ? "metricas" : "conteudo";
   const instagramStatus = searchParams?.instagram;
+  const tiktokStatus = searchParams?.tiktok;
 
   return (
     <div>
@@ -44,6 +46,15 @@ export default async function PerfilPage({
         posts={perfil.instagram_posts ?? null}
         syncedAt={perfil.instagram_synced_at ?? null}
         status={instagramStatus}
+      />
+
+      <TiktokConnect
+        username={perfil.tiktok_username ?? null}
+        followers={perfil.tiktok_followers ?? null}
+        likes={perfil.tiktok_likes ?? null}
+        videos={perfil.tiktok_videos ?? null}
+        syncedAt={perfil.tiktok_synced_at ?? null}
+        status={tiktokStatus}
       />
 
       <PerfilTabs
