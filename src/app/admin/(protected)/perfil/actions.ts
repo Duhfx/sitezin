@@ -421,7 +421,7 @@ export async function sincronizarTiktok(): Promise<SyncResult> {
     tkPartial.tiktok_engagement = dados.media.engagement;
     grupos.push({
       titulo: "Publicações",
-      descricao: `Agregado dos vídeos dos últimos 30 dias${dados.media.videos ? ` · ${dados.media.videos} vídeo(s)` : ""}`,
+      descricao: `Agregado dos vídeos dos últimos 28 dias${dados.media.videos ? ` · ${dados.media.videos} vídeo(s)` : ""}`,
       itens: [
         { label: "Visualizações", valor: fmtBR(dados.media.views), hint: "Soma das views dos vídeos do período" },
         { label: "Curtidas", valor: fmtBR(dados.media.likes), hint: "Soma das curtidas dos vídeos do período" },

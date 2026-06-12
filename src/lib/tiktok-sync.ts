@@ -8,8 +8,9 @@ export type { SyncStep, SyncStepStatus } from "./instagram-sync";
 const OPEN_API = "https://open.tiktokapis.com/v2";
 const TOKEN_URL = `${OPEN_API}/oauth/token/`;
 
-// Janela de agregação das publicações recentes (mesma lógica de "últimos 30 dias").
-const JANELA_DIAS = 30;
+// Janela de agregação das publicações recentes. 28 dias para casar com o padrão
+// de "últimos 28 dias" exibido no próprio app do TikTok.
+const JANELA_DIAS = 28;
 // Limite de páginas do video.list para não paginar indefinidamente (20 vídeos/página).
 const MAX_PAGINAS = 5;
 
