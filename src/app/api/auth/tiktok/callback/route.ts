@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
   const state = searchParams.get("state");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  // Mesma normalização da rota de autorização: o redirect_uri da troca de token
+  // precisa ser idêntico ao usado no authorize (sem barra dupla).
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!.replace(/\/+$/, "");
   const clientKey = process.env.TIKTOK_CLIENT_KEY!;
   const clientSecret = process.env.TIKTOK_CLIENT_SECRET!;
   const redirectUri = `${appUrl}/api/auth/tiktok/callback`;

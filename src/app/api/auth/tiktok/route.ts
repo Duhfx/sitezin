@@ -6,7 +6,9 @@ const SCOPE = "user.info.basic,user.info.profile,user.info.stats,video.list";
 
 export async function GET() {
   const clientKey = process.env.TIKTOK_CLIENT_KEY!;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  // Remove barra(s) final(is) para não gerar "//api" no redirect_uri, que o
+  // TikTok compara como string exata.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!.replace(/\/+$/, "");
   const redirectUri = `${appUrl}/api/auth/tiktok/callback`;
 
   // State anti-CSRF: gravado em cookie httpOnly e conferido no callback.
