@@ -86,13 +86,18 @@ create policy "views_admin_read"
   using (public.is_admin());
 -- "views_public_insert" permanece.
 
--- ── 7) influencer_metrics: escrita só admin (mantém leitura pública) ─
+-- ── 7) influencer_metrics: sem leitura pública, acesso só admin ─
+-- O mídia kit público lê as métricas via service_role (server, ignora RLS),
+-- então NÃO é preciso leitura anônima aqui. A policy "metrics_public_read"
+-- vazava todo o histórico de alcance/engajamento para qualquer um com a
+-- publishable key — por isso é removida.
+drop policy if exists "metrics_public_read" on public.influencer_metrics;
 drop policy if exists "metrics_admin_write" on public.influencer_metrics;
-create policy "metrics_admin_write"
+drop policy if exists "metrics_admin_all" on public.influencer_metrics;
+create policy "metrics_admin_all"
   on public.influencer_metrics for all
   using (public.is_admin())
   with check (public.is_admin());
--- "metrics_public_read" permanece (métricas aparecem no mídia kit).
 
 -- ================================================================
 -- Conferência rápida (rode logado como admin pelo app, ou ajuste):

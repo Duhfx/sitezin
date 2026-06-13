@@ -48,6 +48,13 @@ export default async function MidiaKitAcessoPage({
 }) {
   const supabase = await createServiceClient();
 
+  // Slug curto e token hex só contêm [A-Za-z0-9_-]. Validar o formato antes de
+  // interpolar no filtro `.or()` evita injeção de filtro no PostgREST (vírgulas
+  // ou operadores no token alterariam a query).
+  if (!/^[A-Za-z0-9_-]+$/.test(params.token)) {
+    notFound();
+  }
+
   // Valida token — aceita slug curto (novo) ou token hex completo (backward compat)
   const { data: acesso } = await supabase
     .from("media_kit_access")
