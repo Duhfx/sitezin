@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import RequestForm from "@/components/public/RequestForm";
 import PublicHeader from "@/components/public/PublicHeader";
+
+export const metadata: Metadata = { title: "Mídia Kit" };
 import { createServiceClient } from "@/lib/supabase/server";
 import { PROFILE_ID, profileFromConfig } from "@/lib/influencer-profile";
 import { Lock } from "lucide-react";

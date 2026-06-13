@@ -16,7 +16,10 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Plataforma de Parcerias",
+  title: {
+    template: "Aline — %s",
+    default: "Aline",
+  },
   description: "Cupons e oportunidades de parceria",
 };
 

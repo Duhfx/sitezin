@@ -2,6 +2,9 @@ import { getCuponsAtivos } from "@/lib/supabase/queries";
 import CouponList from "@/components/public/CouponList";
 import PublicHeader from "@/components/public/PublicHeader";
 import { TicketPercent } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Cupons" };
 
 export default async function CuponsPage() {
   const cupons = await getCuponsAtivos();

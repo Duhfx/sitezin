@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+
+export const metadata: Metadata = { title: "Admin" };
 
 export default async function AdminLayout({
   children,
