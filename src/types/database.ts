@@ -42,17 +42,22 @@ export type Database = {
       media_kit_access: {
         Row: {
           id: string;
-          request_id: string;
+          request_id: string | null;
           token: string;
+          slug: string | null;
+          label: string | null;
           created_at: string;
           revoked_at: string | null;
           expires_at: string | null;
         };
-        Insert: Omit<Database["public"]["Tables"]["media_kit_access"]["Row"], "id" | "created_at" | "revoked_at" | "expires_at"> & {
+        Insert: Omit<Database["public"]["Tables"]["media_kit_access"]["Row"], "id" | "created_at" | "revoked_at" | "expires_at" | "slug" | "label" | "request_id"> & {
           id?: string;
+          request_id?: string | null;
           created_at?: string;
           revoked_at?: string | null;
           expires_at?: string | null;
+          slug?: string | null;
+          label?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["media_kit_access"]["Insert"]>;
         Relationships: [];

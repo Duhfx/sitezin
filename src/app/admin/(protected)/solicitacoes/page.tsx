@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SolicitacoesTable from "@/components/admin/SolicitacoesTable";
+import LinksDiretosPanel from "@/components/admin/LinksDiretosPanel";
 
 type Status = "pendente" | "aprovado" | "reprovado";
 
@@ -19,10 +20,17 @@ export default async function SolicitacoesPage({
   const filtro = searchParams.status as Status | "todos" | undefined;
   const supabase = await createClient();
 
-  const { data: todas } = await supabase
-    .from("media_kit_requests")
-    .select("id, nome, empresa, email, status, created_at")
-    .order("created_at", { ascending: false });
+  const [{ data: todas }, { data: linksDiretos }] = await Promise.all([
+    supabase
+      .from("media_kit_requests")
+      .select("id, nome, empresa, email, status, created_at, media_kit_access(revoked_at)")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("media_kit_access")
+      .select("*")
+      .is("request_id", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
   const contadores: Record<Status | "todos", number> = {
     todos: todas?.length ?? 0,
@@ -31,16 +39,29 @@ export default async function SolicitacoesPage({
     reprovado: todas?.filter((s) => s.status === "reprovado").length ?? 0,
   };
 
+  const todasComFlag = (todas ?? []).map((s) => ({
+    ...s,
+    linkRevogado:
+      s.status === "aprovado" &&
+      Array.isArray(s.media_kit_access) &&
+      s.media_kit_access.length > 0 &&
+      s.media_kit_access.every((a) => a.revoked_at !== null),
+  }));
+
   const solicitacoes =
     filtro && filtro !== "todos"
-      ? (todas?.filter((s) => s.status === filtro) ?? [])
-      : (todas ?? []);
+      ? todasComFlag.filter((s) => s.status === filtro)
+      : todasComFlag;
 
   const ativo = filtro ?? "todos";
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   return (
     <div>
       <h1 className="mb-6 text-xl font-semibold text-foreground">Solicitações</h1>
+
+      <LinksDiretosPanel linksIniciais={linksDiretos ?? []} appUrl={appUrl} />
 
       {/* Filtro por status */}
       <div className="mb-4 flex gap-1 rounded-lg border border-border bg-muted p-1 w-fit">

@@ -57,11 +57,12 @@ export default async function DashboardPage() {
     reqMap[r.id] = { empresa: r.empresa, nome: r.nome };
   }
 
-  // Top 5 empresas por visualizações
+  // Top 5 empresas por visualizações (exclui links diretos sem solicitação)
   const topEmpresas = (acessos ?? [])
+    .filter((a) => a.request_id !== null)
     .map((a) => ({
-      empresa: reqMap[a.request_id]?.empresa ?? "—",
-      nome: reqMap[a.request_id]?.nome ?? "—",
+      empresa: reqMap[a.request_id!]?.empresa ?? "—",
+      nome: reqMap[a.request_id!]?.nome ?? "—",
       views: viewCount[a.id] ?? 0,
       ativo: !a.revoked_at,
     }))
