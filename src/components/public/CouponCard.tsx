@@ -33,13 +33,13 @@ export default function CouponCard({ coupon, index = 0 }: { coupon: Coupon; inde
         
         {/* Header: Logo & Brand */}
         <div className="flex items-center gap-5">
-          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
+          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
             {coupon.logo_url ? (
               <Image
                 src={coupon.logo_url}
                 alt={coupon.marca}
                 fill
-                className="object-contain p-2.5"
+                className="object-cover"
               />
             ) : (
               <span className="text-2xl font-bold text-foreground">

@@ -28,6 +28,7 @@ type Solicitacao = {
   email: string;
   status: string;
   created_at: string;
+  linkRevogado?: boolean;
 };
 
 export default function SolicitacoesTable({ solicitacoes }: { solicitacoes: Solicitacao[] }) {
@@ -69,9 +70,20 @@ export default function SolicitacoesTable({ solicitacoes }: { solicitacoes: Soli
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{formatDate(s.created_at)}</td>
                 <td className="px-4 py-3">
-                  <Badge variant={badgeVariant[status]}>
-                    {statusLabel[status] ?? s.status}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={badgeVariant[status]}>
+                      {statusLabel[status] ?? s.status}
+                    </Badge>
+                    {s.linkRevogado && (
+                      <Badge variant="neutral" className="gap-1 opacity-70">
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden>
+                          <circle cx="4" cy="4" r="3.5" stroke="currentColor" />
+                          <line x1="1.5" y1="6.5" x2="6.5" y2="1.5" stroke="currentColor" strokeLinecap="round" />
+                        </svg>
+                        link revogado
+                      </Badge>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className="text-xs font-medium text-primary">Ver →</span>

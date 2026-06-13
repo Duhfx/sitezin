@@ -54,7 +54,8 @@ export default async function DetalheSolicitacaoPage({
     .maybeSingle();
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const linkMidiaKit = acesso ? `${appUrl}/midia-kit/acesso/${acesso.token}` : null;
+  const linkIdentifier = acesso ? (acesso.slug ?? acesso.token) : null;
+  const linkMidiaKit = linkIdentifier ? `${appUrl}/midia-kit/acesso/${linkIdentifier}` : null;
   const acessoAtivo = acesso && !acesso.revoked_at;
   const status = req.status as Status;
 

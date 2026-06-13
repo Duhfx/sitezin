@@ -59,7 +59,7 @@ export default async function PerfilPage({
 
       <PerfilTabs
         defaultTab={defaultTab}
-        conteudo={<PerfilForm initialData={perfil} />}
+        conteudo={<PerfilForm initialData={perfil} metricas={metricasData ?? []} />}
         metricas={<MetricasPanel rows={rowsDesc} />}
       />
     </div>

@@ -48,11 +48,11 @@ export default async function MidiaKitAcessoPage({
 }) {
   const supabase = await createServiceClient();
 
-  // Valida token
+  // Valida token — aceita slug curto (novo) ou token hex completo (backward compat)
   const { data: acesso } = await supabase
     .from("media_kit_access")
     .select("id, revoked_at, expires_at")
-    .eq("token", params.token)
+    .or(`slug.eq.${params.token},token.eq.${params.token}`)
     .maybeSingle();
 
   if (

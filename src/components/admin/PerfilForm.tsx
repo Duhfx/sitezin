@@ -1,26 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Label from "@/components/ui/Label";
 import Textarea from "@/components/ui/Textarea";
 import { salvarPerfil } from "@/app/admin/(protected)/perfil/actions";
+import { PROFILE_ID, toPresentation } from "@/lib/influencer-profile";
+import MediaKitPresentation from "@/components/midia-kit/MediaKitPresentation";
 import type {
   AudienciaGenero,
   AudienciaIdade,
   Case,
   Formato,
+  InfluencerMetrics,
   InfluencerProfile,
   TopEstado,
 } from "@/types/database";
 
-type Props = { initialData: InfluencerProfile };
+type Props = { initialData: InfluencerProfile; metricas: InfluencerMetrics[] };
 
-export default function PerfilForm({ initialData }: Props) {
+export default function PerfilForm({ initialData, metricas }: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [previewData, setPreviewData] = useState<ReturnType<typeof toPresentation> | null>(null);
 
   const [topEstados, setTopEstados] = useState<TopEstado[]>(initialData.top_estados ?? []);
   const [audienciaGenero, setAudienciaGenero] = useState<AudienciaGenero[]>(
@@ -39,6 +44,33 @@ export default function PerfilForm({ initialData }: Props) {
     moodboardInicial[1] ?? null,
     moodboardInicial[2] ?? null,
   ]);
+
+  function abrirPreview() {
+    if (!formRef.current) return;
+    const fd = new FormData(formRef.current);
+    const snap: InfluencerProfile = {
+      ...initialData,
+      id: PROFILE_ID,
+      nome: String(fd.get("nome") ?? ""),
+      nicho: String(fd.get("nicho") ?? ""),
+      biografia: String(fd.get("biografia") ?? ""),
+      publico_alvo: String(fd.get("publico_alvo") ?? ""),
+      localizacao: String(fd.get("localizacao") ?? ""),
+      instagram_url: String(fd.get("instagram_url") ?? "") || null,
+      tiktok_url: String(fd.get("tiktok_url") ?? "") || null,
+      youtube_url: String(fd.get("youtube_url") ?? "") || null,
+      email: String(fd.get("email") ?? "") || null,
+      whatsapp: String(fd.get("whatsapp") ?? "") || null,
+      foto_url: fotoPreview,
+      top_estados: topEstados,
+      audiencia_genero: audienciaGenero,
+      audiencia_idade: audienciaIdade,
+      formatos,
+      cases,
+      moodboard: moodboardPreviews.filter(Boolean) as string[],
+    };
+    setPreviewData(toPresentation(snap));
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,7 +95,7 @@ export default function PerfilForm({ initialData }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
       {/* Listas serializadas */}
       <input type="hidden" name="top_estados" value={JSON.stringify(topEstados)} />
       <input type="hidden" name="audiencia_genero" value={JSON.stringify(audienciaGenero)} />
@@ -384,13 +416,43 @@ export default function PerfilForm({ initialData }: Props) {
       </section>
 
       {/* ── Barra de salvar sticky ───────────────────────────────── */}
-      <div className="sticky bottom-0 z-10 flex items-center gap-4 border-t border-border bg-background/95 py-4 backdrop-blur-sm">
+      <div className="sticky bottom-0 z-10 flex items-center gap-3 border-t border-border bg-background/95 py-4 backdrop-blur-sm">
         <Button type="submit" disabled={loading}>
           {loading ? "Salvando…" : "Salvar alterações"}
+        </Button>
+        <Button type="button" variant="secondary" onClick={abrirPreview}>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1.5 h-3.5 w-3.5" aria-hidden>
+            <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5Z" />
+            <circle cx="8" cy="8" r="2" />
+          </svg>
+          Pré-visualizar
         </Button>
         {error && <p className="text-sm text-destructive">{error}</p>}
         {success && <p className="text-sm font-medium text-success">Perfil salvo com sucesso!</p>}
       </div>
+
+      {/* ── Modal de pré-visualização ────────────────────────────── */}
+      {previewData && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-background" role="dialog" aria-modal aria-label="Pré-visualização do mídia kit">
+          {/* Barra flutuante */}
+          <div className="pointer-events-none fixed inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
+            <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+              Pré-visualização · não salvo
+            </span>
+            <button
+              onClick={() => setPreviewData(null)}
+              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm transition hover:bg-muted"
+            >
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3 w-3" aria-hidden>
+                <path d="M1 1l10 10M11 1 1 11" />
+              </svg>
+              Fechar
+            </button>
+          </div>
+          <MediaKitPresentation influencer={previewData} metricas={metricas} />
+        </div>
+      )}
     </form>
   );
 }

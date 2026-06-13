@@ -1,5 +1,6 @@
 import RequestForm from "@/components/public/RequestForm";
-import { influencer } from "@/config/influencer";
+import { createServiceClient } from "@/lib/supabase/server";
+import { PROFILE_ID, profileFromConfig } from "@/lib/influencer-profile";
 import { Lock } from "lucide-react";
 
 const dentroDoKit = [
@@ -9,7 +10,14 @@ const dentroDoKit = [
   "Crescimento (histórico)",
 ];
 
-export default function MidiaKitPage() {
+export default async function MidiaKitPage() {
+  const supabase = await createServiceClient();
+  const { data } = await supabase
+    .from("influencer_profile")
+    .select("nome, foto_url, nicho")
+    .eq("id", PROFILE_ID)
+    .maybeSingle();
+  const perfil = data ?? profileFromConfig();
   return (
     <main className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">
       {/* Dynamic Background Elements */}
@@ -25,13 +33,13 @@ export default function MidiaKitPage() {
             {/* Identidade da influenciadora */}
             <div className="inline-flex items-center gap-3 mb-8">
               <img
-                src={influencer.foto}
-                alt={influencer.nome}
+                src={perfil.foto_url ?? ""}
+                alt={perfil.nome}
                 className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20 shadow-sm"
               />
               <div className="text-left">
-                <p className="font-bold text-foreground leading-tight">{influencer.nome}</p>
-                <p className="text-xs uppercase tracking-wider text-primary font-semibold">{influencer.nicho}</p>
+                <p className="font-bold text-foreground leading-tight">{perfil.nome}</p>
+                <p className="text-xs uppercase tracking-wider text-primary font-semibold">{perfil.nicho}</p>
               </div>
             </div>
 

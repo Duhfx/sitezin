@@ -11,6 +11,9 @@ const TOKEN_URL = `${OPEN_API}/oauth/token/`;
 // Janela de agregação das publicações recentes. 28 dias para casar com o padrão
 // de "últimos 28 dias" exibido no próprio app do TikTok.
 const JANELA_DIAS = 28;
+// Atraso de processamento do app do TikTok: a janela termina LAG_DIAS atrás para
+// casar com o período já consolidado no app. Pode variar com o tempo.
+const LAG_DIAS = 2;
 // Limite de páginas do video.list para não paginar indefinidamente (20 vídeos/página).
 const MAX_PAGINAS = 5;
 
@@ -128,7 +131,15 @@ export type TiktokMediaAggregates = {
 
 async function fetchVideoAggregates(token: string): Promise<TiktokMediaAggregates> {
   const fields = "create_time,view_count,like_count,comment_count,share_count";
-  const sinceSec = Math.floor(Date.now() / 1000) - JANELA_DIAS * 24 * 60 * 60;
+
+  // Janela alinhada ao app: início de dia (UTC) terminando LAG_DIAS atrás.
+  const DIA = 24 * 60 * 60;
+  const agora = new Date();
+  const inicioHojeUTC = Math.floor(
+    Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate()) / 1000,
+  );
+  const untilSec = inicioHojeUTC - (LAG_DIAS - 1) * DIA; // exclusivo: inclui até o fim de (hoje − LAG)
+  const sinceSec = untilSec - JANELA_DIAS * DIA;
 
   let views = 0;
   let likes = 0;
@@ -156,10 +167,14 @@ async function fetchVideoAggregates(token: string): Promise<TiktokMediaAggregate
     const videos = json.data?.videos ?? [];
     let alcancouAntigo = false;
     for (const v of videos) {
-      // Os vídeos vêm em ordem cronológica reversa; ao passar da janela, paramos.
-      if (typeof v.create_time === "number" && v.create_time < sinceSec) {
-        alcancouAntigo = true;
-        break;
+      // Os vídeos vêm em ordem cronológica reversa.
+      const t = v.create_time;
+      if (typeof t === "number") {
+        if (t >= untilSec) continue; // recente demais → ainda não consolidado no app
+        if (t < sinceSec) {
+          alcancouAntigo = true;
+          break;
+        }
       }
       views += v.view_count ?? 0;
       likes += v.like_count ?? 0;
