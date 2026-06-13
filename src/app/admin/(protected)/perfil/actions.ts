@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, requireUser } from "@/lib/supabase/server";
+import { validarImagem } from "@/lib/upload";
 import { fetchInstagramData, type SyncStep } from "@/lib/instagram-sync";
 import { fetchTiktokData, refreshTiktokToken, TiktokAuthError } from "@/lib/tiktok-sync";
 import type {
@@ -24,8 +25,9 @@ async function uploadImagem(
   file: File,
   pasta: string,
 ): Promise<{ url: string } | { error: string }> {
-  const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-  const path = `${pasta}/${crypto.randomUUID()}.${ext}`;
+  const validacao = validarImagem(file);
+  if ("error" in validacao) return { error: validacao.error };
+  const path = `${pasta}/${crypto.randomUUID()}.${validacao.ext}`;
   const bytes = await file.arrayBuffer();
 
   const { data, error } = await supabase.storage
@@ -54,6 +56,7 @@ function str(value: FormDataEntryValue | null): string {
 }
 
 export async function salvarPerfil(formData: FormData) {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
 
   const nome = str(formData.get("nome"));
@@ -135,6 +138,7 @@ export type SyncResult = {
 
 // ── Passo 1: busca os dados na Graph API e monta o preview (NÃO grava) ──────────
 export async function sincronizarInstagram(): Promise<SyncResult> {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
 
   const { data: perfil } = await supabase
@@ -270,6 +274,7 @@ export async function sincronizarInstagram(): Promise<SyncResult> {
 
 // ── Passo 2: grava no banco o payload confirmado no modal ──────────────────────
 export async function salvarSincronizacao(payload: SyncPayload) {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
 
   // Perfil: campos-espelho + demografia + carimbo de sincronização.
@@ -329,6 +334,7 @@ async function upsertMetricsDoMes(supabase: Client, metrics: SyncPayload["metric
 // ── Sincronização sob demanda com a Display API do TikTok ───────────────────────
 // Passo 1: garante token válido (refresh se preciso), busca dados e monta o preview.
 export async function sincronizarTiktok(): Promise<SyncResult> {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
 
   const { data: perfil } = await supabase
@@ -421,7 +427,7 @@ export async function sincronizarTiktok(): Promise<SyncResult> {
     tkPartial.tiktok_engagement = dados.media.engagement;
     grupos.push({
       titulo: "Publicações",
-      descricao: `Agregado dos vídeos dos últimos 28 dias${dados.media.videos ? ` · ${dados.media.videos} vídeo(s)` : ""}`,
+      descricao: `Agregado dos vídeos dos últimos 28 dias (até ~2 dias atrás, como o app)${dados.media.videos ? ` · ${dados.media.videos} vídeo(s)` : ""}`,
       itens: [
         { label: "Visualizações", valor: fmtBR(dados.media.views), hint: "Soma das views dos vídeos do período" },
         { label: "Curtidas", valor: fmtBR(dados.media.likes), hint: "Soma das curtidas dos vídeos do período" },
@@ -445,6 +451,7 @@ export async function sincronizarTiktok(): Promise<SyncResult> {
 
 // Passo 2: grava no banco o payload confirmado no modal (carimbo tiktok_synced_at).
 export async function salvarSincronizacaoTiktok(payload: SyncPayload) {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
 
   if (payload.perfil) {

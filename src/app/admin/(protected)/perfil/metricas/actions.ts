@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, requireUser } from "@/lib/supabase/server";
 
 function parseNum(value: FormDataEntryValue | null): number {
   const n = Number(String(value ?? "").trim());
@@ -14,6 +14,7 @@ function toFirstOfMonth(yyyyMM: string): string {
 }
 
 export async function salvarMetricas(formData: FormData) {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
 
   const mes = String(formData.get("reference_month") ?? "").trim();
@@ -49,6 +50,7 @@ export async function salvarMetricas(formData: FormData) {
 }
 
 export async function editarMetricas(id: string, formData: FormData) {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
 
   const mes = String(formData.get("reference_month") ?? "").trim();

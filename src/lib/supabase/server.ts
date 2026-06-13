@@ -27,6 +27,17 @@ export async function createClient() {
   );
 }
 
+// Retorna o usuário autenticado ou null. Usado como guard nas Server Actions e
+// rotas OAuth — estas últimas usam o service client (que ignora a RLS), então a
+// verificação de sessão precisa ser explícita aqui, no código.
+export async function requireUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+}
+
 export async function createServiceClient() {
   const cookieStore = await cookies();
 

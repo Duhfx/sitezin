@@ -1,10 +1,18 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/supabase/server";
 
 // Escopos da Display API (Login Kit): perfil + estatísticas + lista de vídeos.
 const SCOPE = "user.info.basic,user.info.profile,user.info.stats,video.list";
 
 export async function GET() {
+  // Só a admin logada pode iniciar a conexão da conta ao perfil.
+  if (!(await requireUser())) {
+    return NextResponse.redirect(
+      new URL("/admin/login", process.env.NEXT_PUBLIC_APP_URL!),
+    );
+  }
+
   const clientKey = process.env.TIKTOK_CLIENT_KEY!;
   // Remove barra(s) final(is) para não gerar "//api" no redirect_uri, que o
   // TikTok compara como string exata.

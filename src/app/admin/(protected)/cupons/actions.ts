@@ -2,9 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, requireUser } from "@/lib/supabase/server";
+import { validarImagem } from "@/lib/upload";
 
 export async function criarCupom(formData: FormData) {
+  if (!(await requireUser())) {
+    return { ok: false, error: "Não autorizado." };
+  }
   const supabase = await createClient();
 
   const marca = String(formData.get("marca") ?? "").trim();
@@ -20,8 +24,9 @@ export async function criarCupom(formData: FormData) {
   let logo_url: string | null = null;
 
   if (logo && logo.size > 0) {
-    const ext = logo.name.includes(".") ? logo.name.split(".").pop() : "jpg";
-    const path = `logos/${crypto.randomUUID()}.${ext}`;
+    const validacao = validarImagem(logo);
+    if ("error" in validacao) return { ok: false, error: validacao.error };
+    const path = `logos/${crypto.randomUUID()}.${validacao.ext}`;
     const bytes = await logo.arrayBuffer();
 
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -51,6 +56,9 @@ export async function criarCupom(formData: FormData) {
 }
 
 export async function editarCupom(id: string, formData: FormData) {
+  if (!(await requireUser())) {
+    return { ok: false, error: "Não autorizado." };
+  }
   const supabase = await createClient();
 
   const marca = String(formData.get("marca") ?? "").trim();
@@ -67,8 +75,9 @@ export async function editarCupom(id: string, formData: FormData) {
   let logo_url: string | null = logo_url_atual;
 
   if (logo && logo.size > 0) {
-    const ext = logo.name.includes(".") ? logo.name.split(".").pop() : "jpg";
-    const path = `logos/${crypto.randomUUID()}.${ext}`;
+    const validacao = validarImagem(logo);
+    if ("error" in validacao) return { ok: false, error: validacao.error };
+    const path = `logos/${crypto.randomUUID()}.${validacao.ext}`;
     const bytes = await logo.arrayBuffer();
 
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -99,6 +108,9 @@ export async function editarCupom(id: string, formData: FormData) {
 }
 
 export async function toggleAtivoCupom(id: string, ativo: boolean) {
+  if (!(await requireUser())) {
+    return { ok: false, error: "Não autorizado." };
+  }
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -115,6 +127,9 @@ export async function toggleAtivoCupom(id: string, ativo: boolean) {
 }
 
 export async function removerCupom(id: string) {
+  if (!(await requireUser())) {
+    return { ok: false, error: "Não autorizado." };
+  }
   const supabase = await createClient();
 
   const { error } = await supabase.from("coupons").delete().eq("id", id);

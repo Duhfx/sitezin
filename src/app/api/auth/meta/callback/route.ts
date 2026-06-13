@@ -1,18 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, requireUser } from "@/lib/supabase/server";
 import { PROFILE_ID } from "@/lib/influencer-profile";
 
 export async function GET(request: NextRequest) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+
+  // Grava tokens via service client (ignora RLS); exige sessão admin no código.
+  if (!(await requireUser())) {
+    return NextResponse.redirect(new URL("/admin/login", appUrl));
+  }
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const state = searchParams.get("state");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
   const appId = process.env.META_APP_ID!;
   const appSecret = process.env.META_APP_SECRET!;
   const redirectUri = `${appUrl}/api/auth/meta/callback`;
 
+  // Confere o state anti-CSRF gravado em cookie pela rota de autorização.
+  const expectedState = request.cookies.get("meta_oauth_state")?.value;
+
   if (error || !code) {
+    return NextResponse.redirect(`${appUrl}/admin/perfil?instagram=erro`);
+  }
+  if (!state || !expectedState || state !== expectedState) {
     return NextResponse.redirect(`${appUrl}/admin/perfil?instagram=erro`);
   }
 
@@ -102,5 +115,7 @@ export async function GET(request: NextRequest) {
     })
     .eq("id", PROFILE_ID);
 
-  return NextResponse.redirect(`${appUrl}/admin/perfil?instagram=conectado`);
+  const res = NextResponse.redirect(`${appUrl}/admin/perfil?instagram=conectado`);
+  res.cookies.delete("meta_oauth_state");
+  return res;
 }

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, requireUser } from "@/lib/supabase/server";
 import { PROFILE_ID } from "@/lib/influencer-profile";
 import { fetchTiktokUserInfo, TiktokAuthError } from "@/lib/tiktok-sync";
 
 export async function GET(request: NextRequest) {
+  // Grava tokens via service client (ignora RLS); exige sessão admin no código.
+  if (!(await requireUser())) {
+    return NextResponse.redirect(
+      new URL("/admin/login", process.env.NEXT_PUBLIC_APP_URL!),
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
