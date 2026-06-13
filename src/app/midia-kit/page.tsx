@@ -1,4 +1,5 @@
 import RequestForm from "@/components/public/RequestForm";
+import PublicHeader from "@/components/public/PublicHeader";
 import { createServiceClient } from "@/lib/supabase/server";
 import { PROFILE_ID, profileFromConfig } from "@/lib/influencer-profile";
 import { Lock } from "lucide-react";
@@ -20,12 +21,13 @@ export default async function MidiaKitPage() {
   const perfil = data ?? profileFromConfig();
   return (
     <main className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">
+      <PublicHeader />
       {/* Dynamic Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full bg-grid-pattern [mask-image:linear-gradient(to_bottom,white,transparent)] opacity-5" />
       <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-40 -left-40 w-[500px] h-[500px] bg-accent2/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-12 lg:py-20 w-full">
+      <div className="relative mx-auto max-w-7xl px-4 pt-28 pb-12 lg:pb-20 w-full">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           
           {/* Left Column: Copy & Teaser */}
