@@ -15,6 +15,10 @@ import type {
   TopEstado, Formato, Case, AudienciaGenero, AudienciaIdade,
 } from "@/types/database";
 
+// Janela considerada nas métricas de publicações do TikTok (views/curtidas):
+// soma dos vídeos dos últimos N dias. Espelha JANELA_DIAS em src/lib/tiktok-sync.ts.
+const TIKTOK_JANELA_DIAS = 28;
+
 // ─── Tipos das props (idênticos ao componente atual) ──────────────────────────
 type InfluencerPresentation = {
   nome: string;
@@ -405,7 +409,7 @@ export default function MediaKitPresentationEditorial({
                   <p className="mt-2 text-sm text-slate-400">seguidores</p>
                   <div className="mt-8 grid grid-cols-2 gap-8 border-t border-slate-200/70 pt-6">
                     <div>
-                      <p className="mb-1 text-xs text-slate-400">Views médias</p>
+                      <p className="mb-1 text-xs text-slate-400">Visualizações ({TIKTOK_JANELA_DIAS}d)</p>
                       <p className="font-display text-2xl font-light italic text-slate-700">
                         {fmtCompact(m?.tiktok_views ?? 0).value}
                         <span className="text-base text-slate-400">{fmtCompact(m?.tiktok_views ?? 0).suffix}</span>

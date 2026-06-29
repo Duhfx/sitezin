@@ -22,7 +22,7 @@ const CAMPOS_INSTAGRAM = [
 
 const CAMPOS_TIKTOK = [
   { name: "tiktok_followers", label: "Seguidores" },
-  { name: "tiktok_views", label: "Views Médias" },
+  { name: "tiktok_views", label: "Visualizações (28 dias)" },
   { name: "tiktok_likes", label: "Curtidas Totais" },
   { name: "tiktok_engagement", label: "Taxa de Engajamento (%)", isFloat: true },
   { name: "tiktok_interactions", label: "Interações" },
