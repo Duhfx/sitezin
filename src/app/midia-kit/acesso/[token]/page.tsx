@@ -4,7 +4,7 @@ import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase/server";
 import { PROFILE_ID, profileFromConfig, toPresentation } from "@/lib/influencer-profile";
 import type { InfluencerMetrics } from "@/types/database";
-import MediaKitPresentation from "@/components/midia-kit/MediaKitPresentation";
+import MediaKitPresentation from "@/components/midia-kit/MediaKitPresentationEditorial";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

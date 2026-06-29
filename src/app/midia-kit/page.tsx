@@ -16,11 +16,17 @@ const dentroDoKit = [
 
 export default async function MidiaKitPage() {
   const supabase = await createServiceClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("influencer_profile")
     .select("nome, foto_url, nicho")
     .eq("id", PROFILE_ID)
     .maybeSingle();
+  if (error) console.error("[influencer_profile] erro na query:", error);
+  if (!data) {
+    console.warn("[influencer_profile] data é null, usando fallback");
+    const { data: todos } = await supabase.from("influencer_profile").select("id");
+    console.warn("[influencer_profile] linhas existentes:", todos);
+  }
   const perfil = data ?? profileFromConfig();
   return (
     <main className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">

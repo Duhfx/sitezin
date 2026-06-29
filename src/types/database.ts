@@ -191,6 +191,22 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["influencer_profile"]["Insert"]>;
         Relationships: [];
       };
+      sync_logs: {
+        Row: {
+          id: string;
+          platform: "instagram" | "tiktok";
+          status: "ok" | "erro";
+          error: string | null;
+          source: "cron" | "manual";
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["sync_logs"]["Row"], "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["sync_logs"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -211,3 +227,4 @@ export type MediaKitAccess = Database["public"]["Tables"]["media_kit_access"]["R
 export type MediaKitView = Database["public"]["Tables"]["media_kit_views"]["Row"];
 export type InfluencerMetrics = Database["public"]["Tables"]["influencer_metrics"]["Row"];
 export type InfluencerProfile = Database["public"]["Tables"]["influencer_profile"]["Row"];
+export type SyncLog = Database["public"]["Tables"]["sync_logs"]["Row"];
