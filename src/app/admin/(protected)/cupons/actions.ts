@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
-import { validarImagem } from "@/lib/upload";
+import { processarImagem } from "@/lib/upload";
 
 export async function criarCupom(formData: FormData) {
   if (!(await requireUser())) {
@@ -24,14 +24,13 @@ export async function criarCupom(formData: FormData) {
   let logo_url: string | null = null;
 
   if (logo && logo.size > 0) {
-    const validacao = validarImagem(logo);
-    if ("error" in validacao) return { ok: false, error: validacao.error };
-    const path = `logos/${crypto.randomUUID()}.${validacao.ext}`;
-    const bytes = await logo.arrayBuffer();
+    const processada = await processarImagem(logo);
+    if ("error" in processada) return { ok: false, error: processada.error };
+    const path = `logos/${crypto.randomUUID()}.${processada.ext}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("media")
-      .upload(path, bytes, { contentType: logo.type });
+      .upload(path, processada.bytes, { contentType: processada.contentType });
 
     if (uploadError) {
       return { ok: false, error: "Erro ao fazer upload da logo." };
@@ -75,14 +74,13 @@ export async function editarCupom(id: string, formData: FormData) {
   let logo_url: string | null = logo_url_atual;
 
   if (logo && logo.size > 0) {
-    const validacao = validarImagem(logo);
-    if ("error" in validacao) return { ok: false, error: validacao.error };
-    const path = `logos/${crypto.randomUUID()}.${validacao.ext}`;
-    const bytes = await logo.arrayBuffer();
+    const processada = await processarImagem(logo);
+    if ("error" in processada) return { ok: false, error: processada.error };
+    const path = `logos/${crypto.randomUUID()}.${processada.ext}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("media")
-      .upload(path, bytes, { contentType: logo.type });
+      .upload(path, processada.bytes, { contentType: processada.contentType });
 
     if (uploadError) {
       return { ok: false, error: "Erro ao fazer upload da logo." };

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
-import { validarImagem } from "@/lib/upload";
+import { processarImagem } from "@/lib/upload";
 import { fetchInstagramData, type SyncStep } from "@/lib/instagram-sync";
 import { fetchTiktokData, refreshTiktokToken, TiktokAuthError } from "@/lib/tiktok-sync";
 import type {
@@ -25,14 +25,13 @@ async function uploadImagem(
   file: File,
   pasta: string,
 ): Promise<{ url: string } | { error: string }> {
-  const validacao = validarImagem(file);
-  if ("error" in validacao) return { error: validacao.error };
-  const path = `${pasta}/${crypto.randomUUID()}.${validacao.ext}`;
-  const bytes = await file.arrayBuffer();
+  const processada = await processarImagem(file);
+  if ("error" in processada) return { error: processada.error };
+  const path = `${pasta}/${crypto.randomUUID()}.${processada.ext}`;
 
   const { data, error } = await supabase.storage
     .from("media")
-    .upload(path, bytes, { contentType: file.type });
+    .upload(path, processada.bytes, { contentType: processada.contentType });
 
   if (error) {
     return { error: `Erro ao fazer upload da imagem (${pasta}).` };

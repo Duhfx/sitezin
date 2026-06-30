@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import { MapPin, ArrowUpRight, Mail, Phone } from "lucide-react";
 import {
   motion, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion,
@@ -321,8 +322,14 @@ export default function MediaKitPresentationEditorial({
             transition={{ duration: 1.1, ease: EASE }}
             className="relative min-h-[55vh] overflow-hidden lg:min-h-full"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={influencer.foto} alt={`Retrato de ${influencer.nome}`} className="absolute inset-0 h-full w-full object-cover" />
+            <Image
+              src={influencer.foto}
+              alt={`Retrato de ${influencer.nome}`}
+              fill
+              priority
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-[#F7F2EC]/40 via-transparent to-transparent lg:bg-gradient-to-r lg:from-[#F7F2EC]/60 lg:via-transparent lg:to-transparent" />
           </motion.div>
         )}
@@ -521,8 +528,13 @@ export default function MediaKitPresentationEditorial({
               transition={{ duration: 0.8 }}
               className="relative aspect-[3/4] overflow-hidden rounded-[1.5rem] md:col-span-5"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={influencer.moodboard[0]} alt="Conteúdo editorial 1" className="h-full w-full object-cover" />
+              <Image
+                src={influencer.moodboard[0]}
+                alt="Conteúdo editorial 1"
+                fill
+                sizes="(min-width: 768px) 42vw, 100vw"
+                className="object-cover"
+              />
             </motion.div>
             <motion.div
               initial={reduce ? false : { opacity: 0 }}
@@ -531,8 +543,13 @@ export default function MediaKitPresentationEditorial({
               transition={{ duration: 0.8, delay: 0.1 }}
               className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] md:col-span-7 md:mt-16"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={influencer.moodboard[1]} alt="Conteúdo editorial 2" className="h-full w-full object-cover" />
+              <Image
+                src={influencer.moodboard[1]}
+                alt="Conteúdo editorial 2"
+                fill
+                sizes="(min-width: 768px) 58vw, 100vw"
+                className="object-cover"
+              />
             </motion.div>
             <motion.div
               style={{ y: y2 }}
@@ -542,8 +559,13 @@ export default function MediaKitPresentationEditorial({
               transition={{ duration: 0.8, delay: 0.2 }}
               className="relative aspect-[16/10] overflow-hidden rounded-[1.5rem] md:col-span-12"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={influencer.moodboard[2]} alt="Conteúdo editorial 3" className="h-full w-full object-cover" />
+              <Image
+                src={influencer.moodboard[2]}
+                alt="Conteúdo editorial 3"
+                fill
+                sizes="(min-width: 768px) 1152px, 100vw"
+                className="object-cover"
+              />
             </motion.div>
           </div>
         </section>

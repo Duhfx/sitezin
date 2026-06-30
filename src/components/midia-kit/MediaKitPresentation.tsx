@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import {
   MapPin, Users, Mail, Phone, Film, LayoutGrid, Layers, Play, Sparkles, Radio,
 } from "lucide-react";
@@ -313,8 +314,15 @@ export default function MediaKitPresentation({
         <motion.div variants={fadeUp} className="lg:col-span-3 flex flex-col gap-6">
           {influencer.foto && (
             <div className="bg-white rounded-3xl p-3 aspect-square shadow-sm border border-slate-100 relative group overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={influencer.foto} alt={`Foto de ${influencer.nome}`} className="absolute inset-3 w-[calc(100%-1.5rem)] h-[calc(100%-1.5rem)] object-cover rounded-[1.25rem] group-hover:scale-105 transition-transform duration-700" />
+              <div className="absolute inset-3 overflow-hidden rounded-[1.25rem]">
+                <Image
+                  src={influencer.foto}
+                  alt={`Foto de ${influencer.nome}`}
+                  fill
+                  sizes="(min-width: 768px) 25vw, 100vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+              </div>
             </div>
           )}
 
@@ -588,16 +596,31 @@ export default function MediaKitPresentation({
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               <motion.div style={{ y: y1 }} variants={fadeUp} className="relative aspect-square md:aspect-[4/5] bg-slate-100 md:mt-8 rounded-[2rem] overflow-hidden shadow-md group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={influencer.moodboard[0]} alt="Foto de conteúdo 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <Image
+                  src={influencer.moodboard[0]}
+                  alt="Foto de conteúdo 1"
+                  fill
+                  sizes="(min-width: 768px) 33vw, 100vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                />
               </motion.div>
               <motion.div style={{ y: y2 }} variants={fadeUp} className="relative aspect-square bg-slate-100 rounded-[2rem] overflow-hidden shadow-md group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={influencer.moodboard[1]} alt="Foto de conteúdo 2" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <Image
+                  src={influencer.moodboard[1]}
+                  alt="Foto de conteúdo 2"
+                  fill
+                  sizes="(min-width: 768px) 33vw, 100vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                />
               </motion.div>
               <motion.div style={{ y: y3 }} variants={fadeUp} className="relative aspect-square md:aspect-[4/5] bg-slate-100 md:mt-16 rounded-[2rem] overflow-hidden shadow-md group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={influencer.moodboard[2]} alt="Foto de conteúdo 3" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <Image
+                  src={influencer.moodboard[2]}
+                  alt="Foto de conteúdo 3"
+                  fill
+                  sizes="(min-width: 768px) 33vw, 100vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                />
               </motion.div>
             </div>
           </motion.div>

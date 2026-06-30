@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import RequestForm from "@/components/public/RequestForm";
 import PublicHeader from "@/components/public/PublicHeader";
 
@@ -43,11 +44,15 @@ export default async function MidiaKitPage() {
           <div className="max-w-2xl mx-auto lg:mx-0">
             {/* Identidade da influenciadora */}
             <div className="inline-flex items-center gap-3 mb-8">
-              <img
-                src={perfil.foto_url ?? ""}
-                alt={perfil.nome}
-                className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20 shadow-sm"
-              />
+              {perfil.foto_url && (
+                <Image
+                  src={perfil.foto_url}
+                  alt={perfil.nome}
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20 shadow-sm"
+                />
+              )}
               <div className="text-left">
                 <p className="font-bold text-foreground leading-tight">{perfil.nome}</p>
                 <p className="text-xs uppercase tracking-wider text-primary font-semibold">{perfil.nicho}</p>
