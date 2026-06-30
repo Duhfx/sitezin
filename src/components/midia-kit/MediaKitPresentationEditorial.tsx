@@ -192,14 +192,28 @@ export default function MediaKitPresentationEditorial({
   metricas: Metrics;
 }) {
   const reduce = useReducedMotion();
+  // "Modo leve" para telas pequenas: o parallax preso ao scroll trava no toque
+  // e custa CPU a cada frame. Detectado no cliente; no desktop (lg+) a direção
+  // editorial com parallax é mantida. (O hero, abaixo, aparece no primeiro paint
+  // em todos os devices — não é gateado por hidratação.)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  const leve = reduce || isMobile;
+
   const lookbookRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: lookbookRef,
     offset: ["start end", "end start"],
   });
   const smooth = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
-  const y1 = useTransform(smooth, [0, 1], reduce ? [0, 0] : [80, -80]);
-  const y2 = useTransform(smooth, [0, 1], reduce ? [0, 0] : [-30, 30]);
+  const y1 = useTransform(smooth, [0, 1], leve ? [0, 0] : [80, -80]);
+  const y2 = useTransform(smooth, [0, 1], leve ? [0, 0] : [-30, 30]);
 
   const m = metricas.length > 0 ? metricas[metricas.length - 1] : null;
 
@@ -258,9 +272,7 @@ export default function MediaKitPresentationEditorial({
 
           <div className="relative z-10 my-auto py-12">
             <motion.h1
-              initial={reduce ? false : { opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: EASE }}
+              initial={false}
               className="font-display text-[clamp(3.5rem,9vw,8rem)] font-light italic leading-[0.92] text-slate-800"
             >
               {primeiroNome}
@@ -274,9 +286,7 @@ export default function MediaKitPresentationEditorial({
 
             {(nichoTags.length > 0 || influencer.localizacao) && (
               <motion.div
-                initial={reduce ? false : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.7 }}
+                initial={false}
                 className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-light text-slate-500"
               >
                 {nichoTags.map((tag, i) => (
@@ -297,9 +307,7 @@ export default function MediaKitPresentationEditorial({
           {/* Métricas como números grandes + fios verticais (sem cards) */}
           {heroStats.length > 0 && (
             <motion.div
-              initial={reduce ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.7 }}
+              initial={false}
               className="relative z-10 flex divide-x divide-slate-300/60 border-t border-slate-300/60 pt-8"
             >
               {heroStats.map((s) => (
@@ -317,9 +325,7 @@ export default function MediaKitPresentationEditorial({
         {/* Coluna foto full-bleed */}
         {influencer.foto && (
           <motion.div
-            initial={reduce ? false : { opacity: 0, scale: 1.04 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.1, ease: EASE }}
+            initial={false}
             className="relative min-h-[55vh] overflow-hidden lg:min-h-full"
           >
             <Image
@@ -521,7 +527,7 @@ export default function MediaKitPresentationEditorial({
         <section ref={lookbookRef} className="relative overflow-hidden bg-[#F7F2EC] py-20 md:py-28">
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 px-6 md:grid-cols-12 md:px-12">
             <motion.div
-              style={{ y: y1 }}
+              style={leve ? undefined : { y: y1 }}
               initial={reduce ? false : { opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
@@ -552,7 +558,7 @@ export default function MediaKitPresentationEditorial({
               />
             </motion.div>
             <motion.div
-              style={{ y: y2 }}
+              style={leve ? undefined : { y: y2 }}
               initial={reduce ? false : { opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
