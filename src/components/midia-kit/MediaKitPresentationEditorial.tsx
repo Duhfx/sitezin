@@ -4,14 +4,16 @@
 // Versão EDITORIAL / LOOKBOOK do mídia kit — proposta de redesign (validação).
 // Mesma interface de props de MediaKitPresentation, para troca de 1 linha caso
 // seja aprovado. Não substitui o componente atual; renderizado só em /media-kit-v2.
+//
+// Animações: CSS puro via <Reveal> (sem framer-motion). O conteúdo é visível no
+// primeiro paint (nunca tela branca esperando hidratação) e a rota não baixa
+// nem hidrata o framer-motion.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useRef, useState, useEffect } from "react";
+import React from "react";
 import Image from "next/image";
 import { MapPin, ArrowUpRight, Mail, Phone } from "lucide-react";
-import {
-  motion, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion,
-} from "framer-motion";
+import Reveal from "./Reveal";
 import type {
   TopEstado, Formato, Case, AudienciaGenero, AudienciaIdade,
 } from "@/types/database";
@@ -72,19 +74,6 @@ const TikTokIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// ─── Animações ────────────────────────────────────────────────────────────────
-const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
-};
-
-const stagger = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-
 // ─── Helpers de formatação ────────────────────────────────────────────────────
 function splitNum(n: number): { value: number; suffix: string; decimals: number } {
   if (n >= 1_000_000) {
@@ -115,36 +104,12 @@ function fmtCompact(n: number) {
   return { value: value.toFixed(decimals), suffix };
 }
 
-// ─── Número animado ao entrar na viewport ─────────────────────────────────────
-function AnimatedNumber({ value, decimals = 0 }: { value: number; decimals?: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true });
-  const reduce = useReducedMotion();
-  const motionValue = useMotionValue(0);
-  const springValue = useSpring(motionValue, { duration: 1800, bounce: 0 });
-  const [display, setDisplay] = useState(value.toFixed(decimals));
-
-  useEffect(() => {
-    if (reduce) {
-      setDisplay(value.toFixed(decimals));
-      return;
-    }
-    if (isInView) motionValue.set(value);
-  }, [isInView, motionValue, value, decimals, reduce]);
-
-  useEffect(() => {
-    if (reduce) return;
-    return springValue.on("change", (v) => setDisplay(v.toFixed(decimals)));
-  }, [springValue, decimals, reduce]);
-
-  return <span ref={ref}>{display}</span>;
-}
-
+// Número grande (sem count-up animado — renderiza o valor final no primeiro paint).
 function BigNumber({ n, suffixClassName }: { n: number; suffixClassName?: string }) {
   const { value, suffix, decimals } = splitNum(n);
   return (
     <>
-      <AnimatedNumber value={value} decimals={decimals} />
+      {value.toFixed(decimals)}
       {suffix && <span className={suffixClassName ?? "not-italic font-sans text-[0.45em] text-slate-400"}>{suffix}</span>}
     </>
   );
@@ -153,16 +118,16 @@ function BigNumber({ n, suffixClassName }: { n: number; suffixClassName?: string
 // ─── Rótulo de seção (numeração editorial discreta, sem eyebrow uppercase) ─────
 function SectionMark({ index, title }: { index: string; title: React.ReactNode }) {
   return (
-    <motion.div variants={fadeUp} className="mb-10 flex items-baseline gap-4">
+    <div className="mb-10 flex items-baseline gap-4">
       <span className="font-display text-sm italic text-[#FF9A86]">{index}</span>
       <h2 className="font-display text-3xl font-light italic text-slate-800 md:text-4xl">{title}</h2>
       <div className="h-px flex-1 bg-slate-200/70" />
-    </motion.div>
+    </div>
   );
 }
 
 // Barra fina de distribuição (gênero / faixa etária).
-function DistRow({ label, pct, color, delay }: { label: string; pct: number; color: string; delay: number }) {
+function DistRow({ label, pct, color }: { label: string; pct: number; color: string }) {
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between">
@@ -170,14 +135,7 @@ function DistRow({ label, pct, color, delay }: { label: string; pct: number; col
         <span className="font-display text-lg italic text-slate-800">{pct}%</span>
       </div>
       <div className="h-px w-full bg-slate-200/70">
-        <motion.div
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: pct / 100 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.1, delay, ease: "easeOut" }}
-          style={{ background: color, transformOrigin: "left" }}
-          className="h-px"
-        />
+        <div className="h-px" style={{ width: `${pct}%`, background: color }} />
       </div>
     </div>
   );
@@ -191,30 +149,6 @@ export default function MediaKitPresentationEditorial({
   influencer: InfluencerPresentation;
   metricas: Metrics;
 }) {
-  const reduce = useReducedMotion();
-  // "Modo leve" para telas pequenas: o parallax preso ao scroll trava no toque
-  // e custa CPU a cada frame. Detectado no cliente; no desktop (lg+) a direção
-  // editorial com parallax é mantida. (O hero, abaixo, aparece no primeiro paint
-  // em todos os devices — não é gateado por hidratação.)
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const sync = () => setIsMobile(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  const leve = reduce || isMobile;
-
-  const lookbookRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: lookbookRef,
-    offset: ["start end", "end start"],
-  });
-  const smooth = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
-  const y1 = useTransform(smooth, [0, 1], leve ? [0, 0] : [80, -80]);
-  const y2 = useTransform(smooth, [0, 1], leve ? [0, 0] : [-30, 30]);
-
   const m = metricas.length > 0 ? metricas[metricas.length - 1] : null;
 
   // ── Derivações ──
@@ -264,17 +198,14 @@ export default function MediaKitPresentationEditorial({
   return (
     <div className="min-h-screen bg-[#faf9f6] font-sans text-slate-700 selection:bg-[#FF9A86] selection:text-white">
 
-      {/* ── HERO — split lookbook ───────────────────────────────────────────── */}
+      {/* ── HERO — split lookbook (sempre visível no primeiro paint) ──────────── */}
       <section className="relative grid min-h-[100dvh] grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Coluna texto */}
         <div className="relative z-10 flex flex-col justify-between bg-[#F7F2EC] px-6 pt-16 pb-12 md:px-12 lg:px-16 lg:pt-20 lg:pb-16">
           <div className="absolute -left-32 top-1/4 h-[420px] w-[420px] rounded-full bg-[#FF9A86]/15 blur-[120px]" />
 
           <div className="relative z-10 my-auto py-12">
-            <motion.h1
-              initial={false}
-              className="font-display text-[clamp(3.5rem,9vw,8rem)] font-light italic leading-[0.92] text-slate-800"
-            >
+            <h1 className="font-display text-[clamp(3.5rem,9vw,8rem)] font-light italic leading-[0.92] text-slate-800">
               {primeiroNome}
               {sobrenome && (
                 <>
@@ -282,13 +213,10 @@ export default function MediaKitPresentationEditorial({
                   <span className="text-[#FF9A86]">{sobrenome}</span>
                 </>
               )}
-            </motion.h1>
+            </h1>
 
             {(nichoTags.length > 0 || influencer.localizacao) && (
-              <motion.div
-                initial={false}
-                className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-light text-slate-500"
-              >
+              <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-light text-slate-500">
                 {nichoTags.map((tag, i) => (
                   <React.Fragment key={tag}>
                     {i > 0 && <span className="h-1 w-1 rounded-full bg-[#FF9A86]/60" />}
@@ -300,16 +228,13 @@ export default function MediaKitPresentationEditorial({
                     <MapPin className="h-3.5 w-3.5" /> {influencer.localizacao}
                   </span>
                 )}
-              </motion.div>
+              </div>
             )}
           </div>
 
           {/* Métricas como números grandes + fios verticais (sem cards) */}
           {heroStats.length > 0 && (
-            <motion.div
-              initial={false}
-              className="relative z-10 flex divide-x divide-slate-300/60 border-t border-slate-300/60 pt-8"
-            >
+            <div className="relative z-10 flex divide-x divide-slate-300/60 border-t border-slate-300/60 pt-8">
               {heroStats.map((s) => (
                 <div key={s.label} className="flex-1 pl-3 first:pl-0 sm:pl-5">
                   <p className={`font-display text-3xl font-light italic sm:text-4xl md:text-5xl ${s.accent ? "text-[#FF9A86]" : "text-slate-800"}`}>
@@ -318,16 +243,13 @@ export default function MediaKitPresentationEditorial({
                   <p className="mt-2 text-[0.62rem] uppercase tracking-[0.14em] text-slate-400 sm:text-[0.7rem] sm:tracking-[0.18em]">{s.label}</p>
                 </div>
               ))}
-            </motion.div>
+            </div>
           )}
         </div>
 
         {/* Coluna foto full-bleed */}
         {influencer.foto && (
-          <motion.div
-            initial={false}
-            className="relative min-h-[55vh] overflow-hidden lg:min-h-full"
-          >
+          <div className="relative min-h-[55vh] overflow-hidden lg:min-h-full">
             <Image
               src={influencer.foto}
               alt={`Retrato de ${influencer.nome}`}
@@ -337,7 +259,7 @@ export default function MediaKitPresentationEditorial({
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#F7F2EC]/40 via-transparent to-transparent lg:bg-gradient-to-r lg:from-[#F7F2EC]/60 lg:via-transparent lg:to-transparent" />
-          </motion.div>
+          </div>
         )}
       </section>
 
@@ -345,38 +267,26 @@ export default function MediaKitPresentationEditorial({
       <div className="mx-auto max-w-6xl px-6 py-20 md:px-12 md:py-28">
 
         {/* BIO — spread editorial */}
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={stagger}
-          className="grid grid-cols-1 gap-x-16 gap-y-8 lg:grid-cols-[0.35fr_0.65fr]"
-        >
-          <motion.h2 variants={fadeUp} className="font-display text-4xl font-light italic leading-tight text-slate-800 md:text-5xl">
+        <Reveal as="section" className="grid grid-cols-1 gap-x-16 gap-y-8 lg:grid-cols-[0.35fr_0.65fr]">
+          <h2 className="font-display text-4xl font-light italic leading-tight text-slate-800 md:text-5xl">
             Muito prazer,<br />sou a <span className="text-[#FF9A86]">{primeiroNome}.</span>
-          </motion.h2>
-          <motion.div variants={fadeUp} className="space-y-5 text-lg font-light leading-relaxed text-slate-500 max-w-[65ch]">
+          </h2>
+          <div className="space-y-5 text-lg font-light leading-relaxed text-slate-500 max-w-[65ch]">
             <div className="mb-6 h-px w-16 bg-[#FF9A86]" />
             {bioParagrafos.map((p, i) => (
               <p key={i}>{p}</p>
             ))}
-          </motion.div>
-        </motion.section>
+          </div>
+        </Reveal>
 
         {/* PLATAFORMAS — Instagram + TikTok lado a lado, sem caixas */}
         {(igFollowers > 0 || tkFollowers > 0) && (
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="mt-28"
-          >
+          <Reveal as="section" className="mt-28">
             <SectionMark index="01" title={<>As <span className="text-[#FF9A86]">plataformas</span></>} />
 
             <div className="grid grid-cols-1 gap-x-16 gap-y-14 md:grid-cols-2 md:divide-x md:divide-slate-200/70">
               {igFollowers > 0 && (
-                <motion.div variants={fadeUp} className="md:pr-16">
+                <div className="md:pr-16">
                   <div className="mb-8 flex items-center gap-3 text-slate-700">
                     <InstagramIcon className="h-5 w-5 text-[#FF9A86]" />
                     <span className="text-sm uppercase tracking-[0.2em] text-slate-400">Instagram</span>
@@ -404,11 +314,11 @@ export default function MediaKitPresentationEditorial({
                       </p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {tkFollowers > 0 && (
-                <motion.div variants={fadeUp} className="md:pl-16">
+                <div className="md:pl-16">
                   <div className="mb-8 flex items-center gap-3 text-slate-700">
                     <TikTokIcon className="h-5 w-5 text-slate-700" />
                     <span className="text-sm uppercase tracking-[0.2em] text-slate-400">TikTok</span>
@@ -436,26 +346,20 @@ export default function MediaKitPresentationEditorial({
                       </p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
             </div>
-          </motion.section>
+          </Reveal>
         )}
 
         {/* PERFORMANCE & ENGAJAMENTO */}
         {showPerformance && (
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="mt-28"
-          >
+          <Reveal as="section" className="mt-28">
             <SectionMark index="02" title={<>Performance <span className="text-[#FF9A86]">e engajamento</span></>} />
 
             <div className="grid grid-cols-1 gap-x-16 gap-y-14 md:grid-cols-2 md:divide-x md:divide-slate-200/70">
               {showIgPerf && (
-                <motion.div variants={fadeUp} className="md:pr-16">
+                <div className="md:pr-16">
                   <div className="mb-6 flex items-center gap-3">
                     <InstagramIcon className="h-4 w-4 text-[#FF9A86]" />
                     <span className="text-sm uppercase tracking-[0.2em] text-slate-400">Instagram</span>
@@ -463,7 +367,7 @@ export default function MediaKitPresentationEditorial({
                   {igEng > 0 && (
                     <div className="flex items-end gap-3">
                       <p className="font-display text-7xl font-light italic text-slate-800">
-                        <AnimatedNumber value={igEng} decimals={1} />
+                        {igEng.toFixed(1)}
                       </p>
                       <div className="mb-3">
                         <p className="font-display text-3xl font-light italic text-slate-400">%</p>
@@ -483,11 +387,11 @@ export default function MediaKitPresentationEditorial({
                       ))}
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
 
               {showTkPerf && (
-                <motion.div variants={fadeUp} className="md:pl-16">
+                <div className="md:pl-16">
                   <div className="mb-6 flex items-center gap-3">
                     <TikTokIcon className="h-4 w-4 text-slate-700" />
                     <span className="text-sm uppercase tracking-[0.2em] text-slate-400">TikTok</span>
@@ -495,7 +399,7 @@ export default function MediaKitPresentationEditorial({
                   {tkEng > 0 && (
                     <div className="flex items-end gap-3">
                       <p className="font-display text-7xl font-light italic text-slate-800">
-                        <AnimatedNumber value={tkEng} decimals={1} />
+                        {tkEng.toFixed(1)}
                       </p>
                       <div className="mb-3">
                         <p className="font-display text-3xl font-light italic text-slate-400">%</p>
@@ -515,25 +419,18 @@ export default function MediaKitPresentationEditorial({
                       ))}
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
             </div>
-          </motion.section>
+          </Reveal>
         )}
       </div>
 
-      {/* LOOKBOOK — faixa de fotografia full-bleed com parallax */}
+      {/* LOOKBOOK — faixa de fotografia full-bleed */}
       {influencer.moodboard.length >= 3 && (
-        <section ref={lookbookRef} className="relative overflow-hidden bg-[#F7F2EC] py-20 md:py-28">
+        <section className="relative overflow-hidden bg-[#F7F2EC] py-20 md:py-28">
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 px-6 md:grid-cols-12 md:px-12">
-            <motion.div
-              style={leve ? undefined : { y: y1 }}
-              initial={reduce ? false : { opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              className="relative aspect-[3/4] overflow-hidden rounded-[1.5rem] md:col-span-5"
-            >
+            <Reveal className="relative aspect-[3/4] overflow-hidden rounded-[1.5rem] md:col-span-5">
               <Image
                 src={influencer.moodboard[0]}
                 alt="Conteúdo editorial 1"
@@ -541,14 +438,8 @@ export default function MediaKitPresentationEditorial({
                 sizes="(min-width: 768px) 42vw, 100vw"
                 className="object-cover"
               />
-            </motion.div>
-            <motion.div
-              initial={reduce ? false : { opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] md:col-span-7 md:mt-16"
-            >
+            </Reveal>
+            <Reveal delay={100} className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] md:col-span-7 md:mt-16">
               <Image
                 src={influencer.moodboard[1]}
                 alt="Conteúdo editorial 2"
@@ -556,15 +447,8 @@ export default function MediaKitPresentationEditorial({
                 sizes="(min-width: 768px) 58vw, 100vw"
                 className="object-cover"
               />
-            </motion.div>
-            <motion.div
-              style={leve ? undefined : { y: y2 }}
-              initial={reduce ? false : { opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative aspect-[16/10] overflow-hidden rounded-[1.5rem] md:col-span-12"
-            >
+            </Reveal>
+            <Reveal delay={200} className="relative aspect-[16/10] overflow-hidden rounded-[1.5rem] md:col-span-12">
               <Image
                 src={influencer.moodboard[2]}
                 alt="Conteúdo editorial 3"
@@ -572,7 +456,7 @@ export default function MediaKitPresentationEditorial({
                 sizes="(min-width: 768px) 1152px, 100vw"
                 className="object-cover"
               />
-            </motion.div>
+            </Reveal>
           </div>
         </section>
       )}
@@ -581,45 +465,40 @@ export default function MediaKitPresentationEditorial({
 
         {/* DEMOGRAFIA / PÚBLICO-ALVO */}
         {showDemografia && (
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-          >
+          <Reveal as="section">
             <SectionMark index="03" title={<>Público <span className="text-[#FF9A86]">alvo</span></>} />
 
             {influencer.publicoAlvo && (
-              <motion.p variants={fadeUp} className="mb-12 max-w-[60ch] text-lg font-light leading-relaxed text-slate-500">
+              <p className="mb-12 max-w-[60ch] text-lg font-light leading-relaxed text-slate-500">
                 {influencer.publicoAlvo}
-              </motion.p>
+              </p>
             )}
 
             <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-16">
               {influencer.audienciaGenero.length > 0 && (
-                <motion.div variants={fadeUp}>
+                <div>
                   <h3 className="mb-6 text-xs uppercase tracking-[0.2em] text-slate-400">Gênero</h3>
                   <div className="space-y-6">
                     {influencer.audienciaGenero.map((g, i) => (
-                      <DistRow key={g.label} label={g.label} pct={g.pct} color={i === 0 ? "#FF9A86" : "#cbd5e1"} delay={0.15 * i} />
+                      <DistRow key={g.label} label={g.label} pct={g.pct} color={i === 0 ? "#FF9A86" : "#cbd5e1"} />
                     ))}
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {influencer.audienciaIdade.length > 0 && (
-                <motion.div variants={fadeUp}>
+                <div>
                   <h3 className="mb-6 text-xs uppercase tracking-[0.2em] text-slate-400">Faixa etária</h3>
                   <div className="space-y-6">
                     {influencer.audienciaIdade.map((f, i) => (
-                      <DistRow key={f.faixa} label={f.faixa} pct={f.pct} color={idadeColors[i % idadeColors.length]} delay={0.15 * i} />
+                      <DistRow key={f.faixa} label={f.faixa} pct={f.pct} color={idadeColors[i % idadeColors.length]} />
                     ))}
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {influencer.topEstados.length > 0 && (
-                <motion.div variants={fadeUp}>
+                <div>
                   <h3 className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400">
                     <MapPin className="h-3.5 w-3.5 text-[#FF9A86]" /> Localização
                   </h3>
@@ -635,28 +514,21 @@ export default function MediaKitPresentationEditorial({
                       </div>
                     ))}
                   </div>
-                </motion.div>
+                </div>
               )}
             </div>
-          </motion.section>
+          </Reveal>
         )}
 
         {/* FORMATOS & ENTREGAS — lista editorial (sem 6 cards iguais) */}
         {influencer.formatos.length > 0 && (
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="mt-28"
-          >
+          <Reveal as="section" className="mt-28">
             <SectionMark index="04" title={<>Formatos <span className="text-[#FF9A86]">e entregas</span></>} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-16">
               {influencer.formatos.map((f, i) => (
-                <motion.div
+                <div
                   key={i}
-                  variants={fadeUp}
                   className="group flex items-baseline gap-5 border-t border-slate-200/70 py-6"
                 >
                   <span className="font-display text-sm italic text-[#FF9A86]">{String(i + 1).padStart(2, "0")}</span>
@@ -664,28 +536,21 @@ export default function MediaKitPresentationEditorial({
                     <p className="font-display text-2xl font-light italic text-slate-800">{f.nome}</p>
                     <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{f.descricao}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.section>
+          </Reveal>
         )}
 
         {/* CASES / SUCESSO — citações editoriais */}
         {influencer.cases.length > 0 && (
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="mt-28"
-          >
+          <Reveal as="section" className="mt-28">
             <SectionMark index="05" title={<>Casos de <span className="text-[#FF9A86]">sucesso</span></>} />
 
             <div className="space-y-10">
               {influencer.cases.map((c, i) => (
-                <motion.div
+                <div
                   key={i}
-                  variants={fadeUp}
                   className="grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-8 md:grid-cols-[0.25fr_0.75fr] md:gap-8"
                 >
                   <div>
@@ -695,23 +560,17 @@ export default function MediaKitPresentationEditorial({
                   <p className="font-display text-2xl font-light italic leading-snug text-slate-800 md:text-3xl">
                     {c.resultado}
                   </p>
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.section>
+          </Reveal>
         )}
       </div>
 
       {/* CTA FINAL */}
       {(influencer.contato.email || influencer.contato.whatsapp) && (
         <section className="px-6 pb-16 md:px-12">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={fadeUp}
-            className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-[#FF9A86] px-8 py-16 md:px-16 md:py-24"
-          >
+          <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-[#FF9A86] px-8 py-16 md:px-16 md:py-24">
             <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-white/15 blur-[90px]" />
             <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-[#FF7A60]/30 blur-[70px]" />
 
@@ -740,7 +599,7 @@ export default function MediaKitPresentationEditorial({
                 )}
               </div>
             </div>
-          </motion.div>
+          </Reveal>
         </section>
       )}
     </div>

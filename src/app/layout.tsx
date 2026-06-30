@@ -36,6 +36,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>
+        {/* Marca o documento como "com JS" antes do paint. Os reveals de entrada
+            (.reveal em globals.css) só escondem conteúdo quando html.js existe —
+            sem JS / antes da hidratação, tudo permanece visível (nunca em branco). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
         {children}
         <Analytics />
       </body>
