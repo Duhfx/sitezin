@@ -101,3 +101,15 @@
     }
   }
 }
+
+/* Impressão / Salvar como PDF (tabela de preços do admin).
+   Sem isto o navegador imprime os blocos coral/creme em branco. */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    margin: 1cm;
+  }
+}

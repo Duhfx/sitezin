@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import Image from "next/image";
@@ -38,6 +39,22 @@ function GrowthBadge({ pct }: { pct: number | null }) {
     </span>
   );
 }
+
+// ─── Metadata (preview em WhatsApp/redes) ─────────────────────────────────────
+// `title.absolute` ignora o template "Aline — %s" do layout raiz. `robots` marca
+// como noindex porque é um link privado por token (não deve ser indexado).
+const OG_TITLE = "Mídia Kit — Aline Carreiro";
+const OG_DESCRICAO = "Dados, alcance e oportunidades de parceria";
+
+export const metadata: Metadata = {
+  title: { absolute: OG_TITLE },
+  description: OG_DESCRICAO,
+  openGraph: {
+    title: OG_TITLE,
+    description: OG_DESCRICAO,
+  },
+  robots: { index: false, follow: false },
+};
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 

@@ -122,6 +122,7 @@ export type Database = {
           formatos: Formato[];
           cases: Case[];
           moodboard: string[];
+          reels: Reel[];
           email: string | null;
           whatsapp: string | null;
           updated_at: string;
@@ -148,6 +149,7 @@ export type Database = {
           Database["public"]["Tables"]["influencer_profile"]["Row"],
           | "id"
           | "updated_at"
+          | "reels"
           | "meta_access_token"
           | "facebook_page_id"
           | "instagram_user_id"
@@ -169,6 +171,7 @@ export type Database = {
         > & {
           id?: string;
           updated_at?: string;
+          reels?: Reel[];
           meta_access_token?: string | null;
           facebook_page_id?: string | null;
           instagram_user_id?: string | null;
@@ -218,6 +221,23 @@ export type Database = {
 export type TopEstado = { uf: string; pct: number };
 export type Formato = { nome: string; descricao: string };
 export type Case = { marca: string; resultado: string; periodo: string };
+// Reel em destaque: link cadastrado manualmente; as métricas (views/likes/
+// comments) e a capa (thumb) são puxadas do Instagram no sync. `media_id` é
+// resolvido a partir do permalink na 1ª sync e cacheado para as próximas.
+// `thumb` pode ser preenchida na mão (override opcional) ou automaticamente pelo
+// sync, que baixa a capa do IG e salva no bucket (a URL do CDN do IG expira).
+export type Reel = {
+  thumb: string;
+  permalink?: string;
+  media_id?: string;
+  views: number;
+  likes: number;
+  comments: number;
+  // Transitório: URL da capa no CDN do Instagram, populada pelo sync só quando
+  // `thumb` está vazia. É baixada e trocada pela URL do bucket antes de salvar —
+  // nunca deve ser persistida. Ver materializarThumbsReels em src/lib/reels-thumb.ts.
+  thumbSource?: string;
+};
 export type AudienciaGenero = { label: string; pct: number };
 export type AudienciaIdade = { faixa: string; pct: number };
 

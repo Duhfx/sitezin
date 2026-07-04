@@ -21,6 +21,8 @@ Plataforma web para uma influenciadora digital (Next.js 14 App Router + Supabase
 - **Mídia kit por token** (`/midia-kit/acesso/[token]`): apresentação privada acessível só via link com token; cada visita é registrada.
 - **Admin** (`/admin/*`): painel protegido para aprovar/reprovar solicitações, gerar/revogar links de acesso, gerenciar cupons, editar o perfil e métricas, e conectar Instagram/TikTok.
 
+`/media-kit-v2` é uma **rota de homologação/preview** do mídia kit (dados fictícios, sem token, com faixa de aviso no topo). Usa o mesmo componente de produção — serve para testar mudanças de layout antes de irem para a página oficial.
+
 ## Arquitetura
 
 ### Supabase: três clientes distintos (`src/lib/supabase/`)
@@ -51,10 +53,15 @@ Tipos `Database` escritos à mão (não gerados). Tabelas:
 - `media_kit_requests` — solicitações das empresas (`status: pendente | aprovado | reprovado`).
 - `media_kit_access` — tokens de acesso (com `revoked_at` e `expires_at`).
 - `media_kit_views` — registro de cada visualização (IP, user agent).
-- `influencer_metrics` — métricas mensais de Instagram/TikTok (gerenciadas manualmente e/ou via sync).
-- `influencer_profile` — **linha única** (singleton) com `PROFILE_ID = "00000000-0000-0000-0000-000000000001"`; guarda conteúdo editável do mídia kit + tokens OAuth de Meta/TikTok.
+- `influencer_metrics` — métricas mensais (uma linha por mês, `reference_month`) de Instagram/TikTok. A página mostra sempre o **mês mais recente**. Ao criar a linha de um mês novo, `upsertMetricsDoMes` **herda os valores do último mês** (não zera) — assim um sync de uma só plataforma não apaga a outra da tela. IG e TikTok escrevem só os próprios campos.
+- `influencer_profile` — **linha única** (singleton) com `PROFILE_ID = "00000000-0000-0000-0000-000000000001"`; guarda conteúdo editável do mídia kit (campos `jsonb`: `top_estados`, `audiencia_genero`, `audiencia_idade`, `formatos`, `cases`, `moodboard`, `reels`) + tokens OAuth de Meta/TikTok e campos-espelho do sync.
+- `sync_logs` — histórico de cada execução de sync (`platform`, `status`, `source: cron | manual`). Gravação best-effort — nunca derruba o sync.
 
-O perfil tem um **fallback estático**: se a linha do banco não existir, `src/config/influencer.ts` + `profileFromConfig()` (`src/lib/influencer-profile.ts`) montam o perfil. `toPresentation()` converte a linha do banco (snake_case) para o formato que `MediaKitPresentation` espera (camelCase).
+`reels` (reels em destaque) é o único conteúdo **híbrido**: `thumb` (print) + `permalink` são cadastrados no admin; `views`/`likes`/`comments` são preenchidos pelo sync do Instagram. Ver a seção de sync abaixo.
+
+O perfil tem um **fallback estático**: se a linha do banco não existir, `src/config/influencer.ts` + `profileFromConfig()` (`src/lib/influencer-profile.ts`) montam o perfil. `toPresentation()` converte a linha do banco (snake_case) para o formato camelCase que o componente de apresentação espera.
+
+**Componente de apresentação:** a produção (`/midia-kit/acesso/[token]`) e o preview `/media-kit-v2` renderizam `MediaKitPresentationEditorial` (design editorial, animações CSS via `<Reveal>`, sem framer-motion) — ao mexer no layout do mídia kit, edite **este**. O `MediaKitPresentation` antigo sobrevive só no modal de pré-visualização do `PerfilForm` (`src/components/admin/PerfilForm.tsx`), que por isso mostra um design **diferente** do que está no ar (inconsistência conhecida, não alinhada de propósito).
 
 Os arquivos SQL de schema/RLS/seed ficam em `docs/*.sql` e são aplicados manualmente no painel Supabase — não há ferramenta de migration.
 
@@ -66,16 +73,22 @@ Fluxo em `src/app/api/auth/{meta,tiktok}/route.ts` (início, com `state` anti-CS
 - `InstagramAuthError` / `TiktokAuthError` sinalizam token expirado (Graph API código 190) — distinto de erro genérico.
 - Janelas de tempo são ajustadas para casar com os números que o app oficial mostra (ver comentários sobre a janela de dias).
 
+Dois gatilhos gravam os dados do sync: o **manual** (`admin/(protected)/perfil/actions.ts`, com preview antes de salvar) e o **automático** (`src/lib/sync-auto.ts` → `autoSyncAll`, chamado pelo Vercel Cron via `GET /api/sync/metricas` autenticado por `Bearer CRON_SECRET`). Cada um tem sua própria cópia de `upsertMetricsDoMes` (herança de mês) — clientes Supabase diferentes; ao mudar a regra, ajuste **os dois**.
+
+**Métricas por reel** (reels em destaque): `fetchInstagramData` recebe os reels cadastrados e, para cada um, faz `GET /{media_id}` direto ou resolve o `media_id` varrendo `/media` (até 5 páginas). O casamento entre o link cadastrado e o `permalink` da API é feito por **shortcode** (`shortcodeInstagram()`) — imune a query string (utm/igsh), `www`, barra final e à variação `/reel` · `/reels` · `/p`. O `media_id` resolvido é cacheado no reel; falha pontual preserva os números atuais.
+
 ### Upload de imagens (`src/lib/upload.ts`)
 
-O bucket `media` é público. `validarImagem()` faz allowlist de MIME (jpg/png/webp) + limite de 5 MB, e **a extensão é derivada do MIME confiável, não do nome do arquivo** (evita XSS via SVG com script). Usado em cupons e perfil.
+O bucket `media` é público. `validarImagem()` faz allowlist de MIME (jpg/png/webp) + limite de 5 MB, e **a extensão é derivada do MIME confiável, não do nome do arquivo** (evita XSS via SVG com script). Usado em cupons, perfil (foto, moodboard) e reels. `processarImagem()` já redimensiona + converte para WebP no upload.
+
+`next.config` usa `images.unoptimized: true` (a otimização on-the-fly do Vercel estourava a cota → 402). Consequência: o `next/image` serve o `src` direto, sem checar `remotePatterns` — por isso imagens externas (unsplash, picsum no preview) funcionam sem configurar domínio.
 
 ## Convenções
 
 - **Idioma**: todo o código de domínio é em português (nomes de funções, variáveis, rotas: `solicitacoes`, `cupons`, `salvarPerfil`, `criarSolicitacao`). Mantenha esse padrão.
 - **Import alias**: `@/*` → `src/*`.
 - **UI**: Tailwind CSS com design tokens em `src/app/globals.css` (cores no formato `H S% L%` para uso com `hsl()`). Componentes base em `src/components/ui/`. Para alterar a identidade visual, edite os tokens em `globals.css`, não cores hard-coded.
-- **Variáveis de ambiente** (ver `.env.example`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_APP_URL` (sem barra no final — usada para montar os links do mídia kit), `META_APP_ID`/`META_APP_SECRET`, `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET`, `RESEND_API_KEY`/`RESEND_FROM_EMAIL`.
+- **Variáveis de ambiente** (ver `.env.example`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_APP_URL` (sem barra no final — usada para montar os links do mídia kit), `META_APP_ID`/`META_APP_SECRET`, `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET`, `RESEND_API_KEY`/`RESEND_FROM_EMAIL`, `CRON_SECRET` (autentica o cron de sync em `/api/sync/metricas`).
 
 ## Documentação de produto
 

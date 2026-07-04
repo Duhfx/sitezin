@@ -41,6 +41,14 @@ const IconGrid = () => (
   </svg>
 );
 
+const IconTable = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4 shrink-0">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+    <line x1="9" y1="10" x2="9" y2="20" />
+  </svg>
+);
+
 const IconLogout = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4 shrink-0">
     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -53,6 +61,7 @@ const navItems: NavItem[] = [
   { href: "/admin/solicitacoes", label: "Solicitações", icon: <IconInbox /> },
   { href: "/admin/cupons", label: "Cupons", icon: <IconTag /> },
   { href: "/admin/perfil", label: "Perfil", icon: <IconUser /> },
+  { href: "/admin/precos", label: "Preços", icon: <IconTable /> },
   { href: "/admin/dashboard", label: "Dashboard", icon: <IconGrid /> },
 ];
 
@@ -119,7 +128,7 @@ export default function AdminSidebar({ pendingCount = 0 }: { pendingCount?: numb
   return (
     <>
       {/* Topbar mobile */}
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card px-4 py-3 lg:hidden print:hidden">
         <button
           onClick={() => setOpen(true)}
           aria-label="Abrir menu"
@@ -140,7 +149,7 @@ export default function AdminSidebar({ pendingCount = 0 }: { pendingCount?: numb
       </header>
 
       {/* Sidebar fixa (desktop) */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-card lg:flex">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-card lg:flex print:hidden">
         {navContent}
       </aside>
 

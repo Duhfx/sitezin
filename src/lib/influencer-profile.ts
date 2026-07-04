@@ -24,6 +24,7 @@ export function profileFromConfig(): InfluencerProfile {
     formatos: influencer.formatos,
     cases: influencer.cases,
     moodboard: influencer.moodboard,
+    reels: [],
     email: influencer.contato.email,
     whatsapp: influencer.contato.whatsapp,
     updated_at: new Date(0).toISOString(),
@@ -86,6 +87,9 @@ export function toPresentation(p: InfluencerProfile) {
     formatos: p.formatos ?? [],
     cases: p.cases ?? [],
     moodboard: p.moodboard ?? [],
+    // Só reels com capa. Entre cadastrar o link e o 1º sync (que baixa a capa do
+    // IG) o reel fica sem thumb — não deve aparecer no mídia kit.
+    reels: (p.reels ?? []).filter((r) => r.thumb),
     contato: {
       email: p.email ?? "",
       whatsapp: p.whatsapp ?? "",

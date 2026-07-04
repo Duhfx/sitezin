@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { processarImagem } from "@/lib/upload";
-import { fetchInstagramData, type SyncStep } from "@/lib/instagram-sync";
+import { fetchInstagramData, shortcodeInstagram, type SyncStep } from "@/lib/instagram-sync";
+import { materializarThumbsReels } from "@/lib/reels-thumb";
 import { fetchTiktokData, refreshTiktokToken, TiktokAuthError } from "@/lib/tiktok-sync";
 import type {
   AudienciaGenero,
@@ -12,6 +13,7 @@ import type {
   Formato,
   InfluencerMetrics,
   InfluencerProfile,
+  Reel,
   TopEstado,
 } from "@/types/database";
 
@@ -50,6 +52,15 @@ function parseJsonList<T>(value: FormDataEntryValue | null): T[] {
   }
 }
 
+function parseJson<T>(value: FormDataEntryValue | null, fallback: T): T {
+  try {
+    const parsed = JSON.parse(String(value ?? "null"));
+    return parsed == null ? fallback : (parsed as T);
+  } catch {
+    return fallback;
+  }
+}
+
 function str(value: FormDataEntryValue | null): string {
   return String(value ?? "").trim();
 }
@@ -85,6 +96,35 @@ export async function salvarPerfil(formData: FormData) {
     if (url) moodboard.push(url);
   }
 
+  // ── Reels em destaque (até 3): print + link. Os números (views/likes/comments)
+  // e o media_id vêm do sync do Instagram — preservados aqui; zerados só quando o
+  // link muda, para o sync recalcular do reel novo. ────────────────────────────
+  const reels: Reel[] = [];
+  for (let i = 0; i < 3; i++) {
+    let thumb = str(formData.get(`reel_url_atual_${i}`)) || "";
+    const file = formData.get(`reel_${i}`) as File | null;
+    if (file && file.size > 0) {
+      const result = await uploadImagem(supabase, file, "reels");
+      if ("error" in result) return { ok: false, error: result.error };
+      thumb = result.url;
+    }
+    const permalink = str(formData.get(`reel_permalink_${i}`)) || undefined;
+    if (!thumb && !permalink) continue; // slot vazio
+
+    const anterior = parseJson<Reel | null>(formData.get(`reel_meta_${i}`), null);
+    // Mesmo reel = mesmo shortcode (ignora utm/igsh/www/barra). Só então preserva.
+    const mesmoLink =
+      !!anterior && shortcodeInstagram(anterior.permalink) === shortcodeInstagram(permalink);
+    reels.push({
+      thumb,
+      permalink,
+      media_id: mesmoLink ? anterior.media_id : undefined,
+      views: mesmoLink ? anterior.views : 0,
+      likes: mesmoLink ? anterior.likes : 0,
+      comments: mesmoLink ? anterior.comments : 0,
+    });
+  }
+
   const { error } = await supabase.from("influencer_profile").upsert({
     id: PROFILE_ID,
     nome,
@@ -102,6 +142,7 @@ export async function salvarPerfil(formData: FormData) {
     formatos: parseJsonList<Formato>(formData.get("formatos")),
     cases: parseJsonList<Case>(formData.get("cases")),
     moodboard,
+    reels,
     email: str(formData.get("email")) || null,
     whatsapp: str(formData.get("whatsapp")) || null,
     updated_at: new Date().toISOString(),
@@ -142,7 +183,7 @@ export async function sincronizarInstagram(): Promise<SyncResult> {
 
   const { data: perfil } = await supabase
     .from("influencer_profile")
-    .select("meta_access_token, instagram_user_id, meta_token_expires_at")
+    .select("meta_access_token, instagram_user_id, meta_token_expires_at, reels")
     .eq("id", PROFILE_ID)
     .maybeSingle();
 
@@ -153,7 +194,11 @@ export async function sincronizarInstagram(): Promise<SyncResult> {
     return { ok: false, error: "A conexão com o Instagram expirou. Clique em Reconectar." };
   }
 
-  const dados = await fetchInstagramData(perfil.instagram_user_id, perfil.meta_access_token);
+  const dados = await fetchInstagramData(
+    perfil.instagram_user_id,
+    perfil.meta_access_token,
+    perfil.reels ?? [],
+  );
 
   if (dados.authError) {
     return {
@@ -247,6 +292,19 @@ export async function sincronizarInstagram(): Promise<SyncResult> {
       { label: "Compartilhamentos", valor: fmtBR(dados.media.shares), hint: "Soma das publicações dos últimos 30 dias" },
     );
   }
+  // ── Reels em destaque: atualiza views/likes/comments dos reels cadastrados ──
+  if (dados.reels) {
+    perfilUpdate.reels = await materializarThumbsReels(supabase, dados.reels);
+    grupos.push({
+      titulo: "Reels em destaque",
+      descricao: "Métricas atuais dos reels cadastrados",
+      itens: dados.reels.map((r, i) => ({
+        label: `Reel ${i + 1}`,
+        valor: `${fmtBR(r.views)} views · ${fmtBR(r.likes)} curtidas · ${fmtBR(r.comments)} comentários`,
+      })),
+    });
+  }
+
   if (contaItens.length > 0)
     grupos.push({
       titulo: "Métricas da conta",
@@ -308,26 +366,50 @@ async function upsertMetricsDoMes(supabase: Client, metrics: SyncPayload["metric
 
   if (existente) {
     await supabase.from("influencer_metrics").update(metrics).eq("id", existente.id);
-  } else {
-    await supabase.from("influencer_metrics").insert({
-      reference_month: mesRef,
-      instagram_followers: 0,
-      instagram_reach: 0,
-      instagram_impressions: 0,
-      instagram_engagement: 0,
-      instagram_interactions: 0,
-      instagram_shares: 0,
-      instagram_saves: 0,
-      tiktok_followers: 0,
-      tiktok_views: 0,
-      tiktok_likes: 0,
-      tiktok_engagement: 0,
-      tiktok_interactions: 0,
-      tiktok_shares: 0,
-      tiktok_saves: 0,
-      ...metrics,
-    });
+    return;
   }
+
+  // Mês novo herda o último mês: um sync de uma só plataforma não zera a outra
+  // na tela (só os campos sincronizados são sobrescritos por ...metrics).
+  await supabase.from("influencer_metrics").insert({
+    reference_month: mesRef,
+    ...(await baseNovoMes(supabase)),
+    ...metrics,
+  });
+}
+
+const METRICAS_ZERADAS = {
+  instagram_followers: 0,
+  instagram_reach: 0,
+  instagram_impressions: 0,
+  instagram_engagement: 0,
+  instagram_interactions: 0,
+  instagram_shares: 0,
+  instagram_saves: 0,
+  tiktok_followers: 0,
+  tiktok_views: 0,
+  tiktok_likes: 0,
+  tiktok_engagement: 0,
+  tiktok_interactions: 0,
+  tiktok_shares: 0,
+  tiktok_saves: 0,
+};
+
+// Valores-base da linha de um mês novo: os do último mês existente (para não
+// zerar a plataforma que ainda não sincronizou neste mês), ou zeros se não há
+// histórico. Descarta id/reference_month/created_at.
+async function baseNovoMes(supabase: Client): Promise<typeof METRICAS_ZERADAS> {
+  const { data: ultima } = await supabase
+    .from("influencer_metrics")
+    .select("*")
+    .order("reference_month", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!ultima) return METRICAS_ZERADAS;
+  // Copia só os campos de métrica, descartando id/reference_month/created_at.
+  return Object.fromEntries(
+    Object.keys(METRICAS_ZERADAS).map((k) => [k, ultima[k as keyof typeof ultima] ?? 0]),
+  ) as typeof METRICAS_ZERADAS;
 }
 
 // ── Sincronização sob demanda com a Display API do TikTok ───────────────────────

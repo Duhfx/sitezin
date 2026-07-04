@@ -31,17 +31,19 @@ export function validarImagem(file: File): { ext: string } | { error: string } {
   return { ext };
 }
 
-// Valida e processa a imagem para upload: redimensiona para no máximo
-// MAX_DIMENSAO px no lado maior e recomprime em WebP. Retorna os bytes prontos
-// já com o contentType/ext corretos para gravar no Storage.
-export async function processarImagem(
-  file: File,
-): Promise<{ bytes: Buffer; ext: string; contentType: string } | { error: string }> {
-  const validacao = validarImagem(file);
-  if ("error" in validacao) return validacao;
+type ProcessResult =
+  | { bytes: Buffer; ext: string; contentType: string }
+  | { error: string };
 
+// Redimensiona para no máximo MAX_DIMENSAO px no lado maior e recomprime em
+// WebP. Origem confiável (bytes já em memória, ex.: capa baixada do Instagram no
+// sync) — sem allowlist de MIME: o sharp converte pra webp e neutraliza qualquer
+// coisa que não seja imagem (falha no catch).
+export async function processarBytes(entrada: Buffer): Promise<ProcessResult> {
+  if (entrada.byteLength > MAX_UPLOAD_BYTES) {
+    return { error: "Imagem muito grande (máximo 5 MB)." };
+  }
   try {
-    const entrada = Buffer.from(await file.arrayBuffer());
     const bytes = await sharp(entrada)
       .rotate() // respeita a orientação EXIF (fotos de celular)
       .resize(MAX_DIMENSAO, MAX_DIMENSAO, {
@@ -55,4 +57,12 @@ export async function processarImagem(
   } catch {
     return { error: "Não foi possível processar a imagem. Tente outro arquivo." };
   }
+}
+
+// Valida (MIME + tamanho) e processa um upload do usuário. A validação de MIME é
+// importante aqui porque a origem é um arquivo enviado pelo usuário.
+export async function processarImagem(file: File): Promise<ProcessResult> {
+  const validacao = validarImagem(file);
+  if ("error" in validacao) return validacao;
+  return processarBytes(Buffer.from(await file.arrayBuffer()));
 }

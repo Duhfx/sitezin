@@ -12,15 +12,19 @@
 
 import React from "react";
 import Image from "next/image";
-import { MapPin, ArrowUpRight, Mail, Phone } from "lucide-react";
+import { MapPin, ArrowUpRight, Mail } from "lucide-react";
 import Reveal from "./Reveal";
+import WhatsappIcon from "@/components/icons/WhatsappIcon";
 import type {
-  TopEstado, Formato, Case, AudienciaGenero, AudienciaIdade,
+  TopEstado, Formato, Case, AudienciaGenero, AudienciaIdade, Reel,
 } from "@/types/database";
 
 // Janela considerada nas métricas de publicações do TikTok (views/curtidas):
 // soma dos vídeos dos últimos N dias. Espelha JANELA_DIAS em src/lib/tiktok-sync.ts.
 const TIKTOK_JANELA_DIAS = 28;
+
+// Reel em destaque (tipo canônico em @/types/database): print + métricas.
+// Opcional — cadastrável depois (igual ao moodboard); a seção só renderiza com reels.
 
 // ─── Tipos das props (idênticos ao componente atual) ──────────────────────────
 type InfluencerPresentation = {
@@ -38,6 +42,7 @@ type InfluencerPresentation = {
   formatos: Formato[];
   cases: Case[];
   moodboard: string[];
+  reels?: Reel[];
   contato: { email: string; whatsapp: string };
 };
 
@@ -227,6 +232,33 @@ export default function MediaKitPresentationEditorial({
                   <span className="ml-1 flex items-center gap-1.5 text-slate-400">
                     <MapPin className="h-3.5 w-3.5" /> {influencer.localizacao}
                   </span>
+                )}
+              </div>
+            )}
+
+            {(influencer.redes.instagram || influencer.redes.tiktok) && (
+              <div className="mt-8 flex items-center gap-3">
+                {influencer.redes.instagram && (
+                  <a
+                    href={influencer.redes.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Instagram"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300/70 text-slate-600 transition-colors hover:border-[#FF9A86] hover:text-[#FF9A86]"
+                  >
+                    <InstagramIcon className="h-4 w-4" />
+                  </a>
+                )}
+                {influencer.redes.tiktok && (
+                  <a
+                    href={influencer.redes.tiktok}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="TikTok"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300/70 text-slate-600 transition-colors hover:border-[#FF9A86] hover:text-[#FF9A86]"
+                  >
+                    <TikTokIcon className="h-4 w-4" />
+                  </a>
                 )}
               </div>
             )}
@@ -424,6 +456,62 @@ export default function MediaKitPresentationEditorial({
             </div>
           </Reveal>
         )}
+
+        {/* REELS EM DESTAQUE — prints do Instagram com métricas */}
+        {(influencer.reels?.length ?? 0) > 0 && (
+          <Reveal as="section" className="mt-28">
+            <SectionMark index="03" title={<>Reels em <span className="text-[#FF9A86]">destaque</span></>} />
+
+            <div className="grid grid-cols-1 gap-x-10 gap-y-12 sm:grid-cols-3">
+              {influencer.reels!.map((reel, i) => {
+                const stats = [
+                  { label: "Views", n: reel.views },
+                  { label: "Curtidas", n: reel.likes },
+                  { label: "Comentários", n: reel.comments },
+                ].filter((s) => s.n > 0);
+                return (
+                  <div key={i}>
+                    <div className="group relative aspect-[9/16] overflow-hidden rounded-[1.5rem] bg-slate-100">
+                      <Image
+                        src={reel.thumb}
+                        alt={`Reel em destaque ${i + 1}`}
+                        fill
+                        sizes="(min-width: 640px) 30vw, 100vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      />
+                      {reel.permalink && (
+                        <a
+                          href={reel.permalink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Abrir reel ${i + 1} no Instagram`}
+                          className="absolute inset-0 z-10 flex items-start justify-end p-3"
+                        >
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-slate-700 backdrop-blur">
+                            <ArrowUpRight className="h-4 w-4" />
+                          </span>
+                        </a>
+                      )}
+                    </div>
+                    {stats.length > 0 && (
+                      <div className="mt-5 grid grid-cols-3 gap-3 border-t border-slate-200/70 pt-4">
+                        {stats.map((s) => (
+                          <div key={s.label}>
+                            <p className="font-display text-xl font-light italic text-slate-800">
+                              {fmtCompact(s.n).value}
+                              <span className="text-sm text-slate-400">{fmtCompact(s.n).suffix}</span>
+                            </p>
+                            <p className="mt-1 text-[0.65rem] uppercase tracking-[0.14em] text-slate-400">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
+        )}
       </div>
 
       {/* LOOKBOOK — faixa de fotografia full-bleed */}
@@ -466,7 +554,7 @@ export default function MediaKitPresentationEditorial({
         {/* DEMOGRAFIA / PÚBLICO-ALVO */}
         {showDemografia && (
           <Reveal as="section">
-            <SectionMark index="03" title={<>Público <span className="text-[#FF9A86]">alvo</span></>} />
+            <SectionMark index="04" title={<>Público <span className="text-[#FF9A86]">alvo</span></>} />
 
             {influencer.publicoAlvo && (
               <p className="mb-12 max-w-[60ch] text-lg font-light leading-relaxed text-slate-500">
@@ -523,7 +611,7 @@ export default function MediaKitPresentationEditorial({
         {/* FORMATOS & ENTREGAS — lista editorial (sem 6 cards iguais) */}
         {influencer.formatos.length > 0 && (
           <Reveal as="section" className="mt-28">
-            <SectionMark index="04" title={<>Formatos <span className="text-[#FF9A86]">e entregas</span></>} />
+            <SectionMark index="05" title={<>Formatos <span className="text-[#FF9A86]">e entregas</span></>} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-16">
               {influencer.formatos.map((f, i) => (
@@ -545,7 +633,7 @@ export default function MediaKitPresentationEditorial({
         {/* CASES / SUCESSO — citações editoriais */}
         {influencer.cases.length > 0 && (
           <Reveal as="section" className="mt-28">
-            <SectionMark index="05" title={<>Casos de <span className="text-[#FF9A86]">sucesso</span></>} />
+            <SectionMark index="06" title={<>Casos de <span className="text-[#FF9A86]">sucesso</span></>} />
 
             <div className="space-y-10">
               {influencer.cases.map((c, i) => (
@@ -592,7 +680,7 @@ export default function MediaKitPresentationEditorial({
                 )}
                 {influencer.contato.whatsapp && (
                   <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 text-white transition-opacity hover:opacity-80">
-                    <Phone className="h-4 w-4" />
+                    <WhatsappIcon className="h-4 w-4" />
                     <span className="font-medium">{fmtWhatsapp(influencer.contato.whatsapp)}</span>
                     <ArrowUpRight className="h-4 w-4 opacity-60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </a>

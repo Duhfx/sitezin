@@ -17,7 +17,7 @@ const INFLUENCER = {
   nicho: "Lifestyle · Gastronomia · Viagens · Moda",
   publicoAlvo:
     "Um perfil engajado e fiel, composto majoritariamente por mulheres que buscam inspiração diária em lifestyle, gastronomia, moda e viagens pelo Sul e Sudeste do país.",
-  localizacao: "Blumenau, SC · São Paulo, SP",
+  localizacao: "Blumenau/SC",
   topEstados: [
     { uf: "São Paulo", pct: 38 },
     { uf: "Rio de Janeiro", pct: 22 },
@@ -55,6 +55,12 @@ const INFLUENCER = {
     "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=900&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=1100&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1400&auto=format&fit=crop",
+  ],
+  // Prints do Instagram (reels de maior sucesso). Fictícios para o preview.
+  reels: [
+    { thumb: "https://picsum.photos/seed/reel-cafe/540/960", views: 842_000, likes: 61_400, comments: 1_280, permalink: "https://instagram.com" },
+    { thumb: "https://picsum.photos/seed/reel-viagem/540/960", views: 1_240_000, likes: 98_200, comments: 2_140, permalink: "https://instagram.com" },
+    { thumb: "https://picsum.photos/seed/reel-look/540/960", views: 517_000, likes: 44_900, comments: 873, permalink: "https://instagram.com" },
   ],
   contato: { email: "contato@alinecarreiro.com", whatsapp: "5511999998888" },
 };

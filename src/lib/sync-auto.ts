@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { fetchInstagramData, InstagramAuthError } from "./instagram-sync";
+import { materializarThumbsReels } from "./reels-thumb";
 import { fetchTiktokData, refreshTiktokToken, TiktokAuthError } from "./tiktok-sync";
 import type { Database, InfluencerMetrics, InfluencerProfile } from "@/types/database";
 
@@ -53,26 +54,51 @@ async function upsertMetricsDoMes(
 
   if (existente) {
     await supabase.from("influencer_metrics").update(metrics).eq("id", existente.id);
-  } else {
-    await supabase.from("influencer_metrics").insert({
-      reference_month: mesRef,
-      instagram_followers: 0,
-      instagram_reach: 0,
-      instagram_impressions: 0,
-      instagram_engagement: 0,
-      instagram_interactions: 0,
-      instagram_shares: 0,
-      instagram_saves: 0,
-      tiktok_followers: 0,
-      tiktok_views: 0,
-      tiktok_likes: 0,
-      tiktok_engagement: 0,
-      tiktok_interactions: 0,
-      tiktok_shares: 0,
-      tiktok_saves: 0,
-      ...metrics,
-    });
+    return;
   }
+
+  // Mês novo herda o último mês: um sync de uma só plataforma não zera a outra
+  // na tela (só os campos sincronizados são sobrescritos por ...metrics).
+  await supabase.from("influencer_metrics").insert({
+    reference_month: mesRef,
+    ...(await baseNovoMes(supabase)),
+    ...metrics,
+  });
+}
+
+const METRICAS_ZERADAS = {
+  instagram_followers: 0,
+  instagram_reach: 0,
+  instagram_impressions: 0,
+  instagram_engagement: 0,
+  instagram_interactions: 0,
+  instagram_shares: 0,
+  instagram_saves: 0,
+  tiktok_followers: 0,
+  tiktok_views: 0,
+  tiktok_likes: 0,
+  tiktok_engagement: 0,
+  tiktok_interactions: 0,
+  tiktok_shares: 0,
+  tiktok_saves: 0,
+};
+
+// Valores-base da linha de um mês novo: os do último mês existente (para não
+// zerar a plataforma que ainda não sincronizou neste mês), ou zeros se não há
+// histórico. Descarta id/reference_month/created_at.
+async function baseNovoMes(
+  supabase: ReturnType<typeof serviceClient>,
+): Promise<typeof METRICAS_ZERADAS> {
+  const { data: ultima } = await supabase
+    .from("influencer_metrics")
+    .select("*")
+    .order("reference_month", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!ultima) return METRICAS_ZERADAS;
+  return Object.fromEntries(
+    Object.keys(METRICAS_ZERADAS).map((k) => [k, ultima[k as keyof typeof ultima] ?? 0]),
+  ) as typeof METRICAS_ZERADAS;
 }
 
 export async function autoSyncInstagram(): Promise<PlatformResult> {
@@ -80,7 +106,7 @@ export async function autoSyncInstagram(): Promise<PlatformResult> {
 
   const { data: perfil } = await supabase
     .from("influencer_profile")
-    .select("meta_access_token, instagram_user_id, meta_token_expires_at")
+    .select("meta_access_token, instagram_user_id, meta_token_expires_at, reels")
     .eq("id", PROFILE_ID)
     .maybeSingle();
 
@@ -92,7 +118,11 @@ export async function autoSyncInstagram(): Promise<PlatformResult> {
   }
 
   try {
-    const dados = await fetchInstagramData(perfil.instagram_user_id, perfil.meta_access_token);
+    const dados = await fetchInstagramData(
+      perfil.instagram_user_id,
+      perfil.meta_access_token,
+      perfil.reels ?? [],
+    );
 
     if (dados.authError) {
       return { ok: false, error: "Token do Instagram expirou.", authExpired: true };
@@ -127,6 +157,9 @@ export async function autoSyncInstagram(): Promise<PlatformResult> {
     }
     if (dados.demografia.localidades.length > 0) {
       profileUpdate.top_estados = dados.demografia.localidades;
+    }
+    if (dados.reels) {
+      profileUpdate.reels = await materializarThumbsReels(supabase, dados.reels);
     }
 
     await supabase.from("influencer_profile").update(profileUpdate).eq("id", PROFILE_ID);

@@ -1,4 +1,4 @@
-import type { AudienciaGenero, AudienciaIdade, TopEstado } from "@/types/database";
+import type { AudienciaGenero, AudienciaIdade, TopEstado, Reel } from "@/types/database";
 
 // Centraliza a versão da Graph API (mesma usada no OAuth/callback).
 const GRAPH = "https://graph.facebook.com/v23.0";
@@ -222,6 +222,96 @@ async function fetchDemografia(igId: string, token: string) {
   return { genero, idade, localidades };
 }
 
+// ─── Reels em destaque (métricas por reel) ────────────────────────────────────
+// like_count/comments_count são campos diretos da mídia; views é insight.
+type MediaNode = {
+  id: string;
+  permalink?: string;
+  like_count?: number;
+  comments_count?: number;
+  thumbnail_url?: string; // capa do reel/vídeo (URL do CDN, expira em dias)
+  insights?: { data?: { name: string; values?: { value?: number }[] }[] };
+};
+const REEL_FIELDS =
+  "id,permalink,like_count,comments_count,thumbnail_url,insights.metric(views)";
+
+function lerViews(node: MediaNode): number {
+  const ins = node.insights?.data ?? [];
+  return ins.find((i) => i.name === "views")?.values?.[0]?.value ?? 0;
+}
+
+// Extrai o shortcode de uma URL de reel/post do Instagram. É o identificador
+// estável — imune a query string (utm/igsh), www, barra final e à variação
+// /reel · /reels · /p · /tv. Ex.: .../reel/DaVQHmnBeHU/?utm=... → "DaVQHmnBeHU".
+export function shortcodeInstagram(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(/instagram\.com\/(?:reel|reels|p|tv)\/([^/?#]+)/i);
+  return m ? m[1] : null;
+}
+
+// Reel campeão costuma ser antigo → varre /media paginando e casa pelo shortcode.
+// Cap de páginas evita varredura infinita; o media_id resolvido é cacheado no
+// reel (próxima sync usa GET direto e nem cai aqui).
+async function resolveReelPorPermalink(
+  igId: string,
+  token: string,
+  permalink: string,
+): Promise<MediaNode | null> {
+  const alvo = shortcodeInstagram(permalink);
+  if (!alvo) return null;
+  let params: Record<string, string> = { fields: REEL_FIELDS, limit: "100" };
+  for (let pagina = 0; pagina < 5; pagina++) {
+    const res = await graphGet<{
+      data?: MediaNode[];
+      paging?: { cursors?: { after?: string } };
+    }>(`${igId}/media`, params, token);
+    const match = (res.data ?? []).find(
+      (m) => shortcodeInstagram(m.permalink) === alvo,
+    );
+    if (match) return match;
+    const after = res.paging?.cursors?.after;
+    if (!after) break;
+    params = { ...params, after };
+  }
+  return null;
+}
+
+// Atualiza views/likes/comments de cada reel cadastrado. Resiliente por reel:
+// falha pontual preserva os números atuais; só token expirado propaga.
+async function fetchReelsMetrics(igId: string, token: string, reels: Reel[]): Promise<Reel[]> {
+  const out: Reel[] = [];
+  for (const reel of reels) {
+    try {
+      let node: MediaNode | null = null;
+      if (reel.media_id) {
+        node = await graphGet<MediaNode>(reel.media_id, { fields: REEL_FIELDS }, token);
+      } else if (reel.permalink) {
+        node = await resolveReelPorPermalink(igId, token, reel.permalink);
+      }
+      if (node) {
+        out.push({
+          ...reel,
+          media_id: node.id ?? reel.media_id,
+          views: lerViews(node),
+          likes: node.like_count ?? reel.likes,
+          comments: node.comments_count ?? reel.comments,
+          // Sem capa própria → carrega a URL do IG pra materializarThumbsReels
+          // baixar e salvar no bucket depois (a URL do IG expira).
+          ...(!reel.thumb && node.thumbnail_url
+            ? { thumbSource: node.thumbnail_url }
+            : {}),
+        });
+      } else {
+        out.push(reel); // não encontrado → mantém os números atuais
+      }
+    } catch (e) {
+      if (e instanceof InstagramAuthError) throw e; // token expirado propaga
+      out.push(reel); // erro pontual → preserva
+    }
+  }
+  return out;
+}
+
 // ─── Orquestrador com status por etapa (resiliente a falhas parciais) ─────────
 export type SyncStepStatus = "ok" | "erro" | "pulado";
 export type SyncStep = { secao: string; status: SyncStepStatus; detalhe?: string };
@@ -231,11 +321,17 @@ export type InstagramSyncData = {
   insights: { reach: number; views: number; interactions: number; engagement: number } | null;
   media: { saves: number; shares: number } | null;
   demografia: { genero: AudienciaGenero[]; idade: AudienciaIdade[]; localidades: TopEstado[] };
+  // null quando não há reels cadastrados; senão, a lista com métricas atualizadas.
+  reels: Reel[] | null;
   steps: SyncStep[];
   authError: boolean;
 };
 
-export async function fetchInstagramData(igId: string, token: string): Promise<InstagramSyncData> {
+export async function fetchInstagramData(
+  igId: string,
+  token: string,
+  reels: Reel[] = [],
+): Promise<InstagramSyncData> {
   const steps: SyncStep[] = [];
   let authError = false;
 
@@ -259,6 +355,10 @@ export async function fetchInstagramData(igId: string, token: string): Promise<I
   const perfil = await run("Perfil", () => fetchPerfil(igId, token));
   const insights = await run("Métricas da conta", () => fetchAccountInsights(igId, token));
   const media = await run("Saves e compartilhamentos", () => fetchMediaAggregates(igId, token));
+  const reelsAtualizados =
+    reels.length > 0
+      ? await run("Reels em destaque", () => fetchReelsMetrics(igId, token, reels))
+      : null;
   const demografia =
     (await run("Demografia da audiência", () => fetchDemografia(igId, token))) ?? {
       genero: [],
@@ -279,5 +379,5 @@ export async function fetchInstagramData(igId: string, token: string): Promise<I
     }
   }
 
-  return { perfil, insights, media, demografia, steps, authError };
+  return { perfil, insights, media, demografia, reels: reelsAtualizados, steps, authError };
 }

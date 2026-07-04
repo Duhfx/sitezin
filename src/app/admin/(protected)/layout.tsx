@@ -25,10 +25,10 @@ export default async function AdminLayout({
     .eq("status", "pendente");
 
   return (
-    <div className="flex min-h-screen flex-col bg-background lg:flex-row">
+    <div className="flex h-dvh flex-col bg-background lg:flex-row print:block print:h-auto">
       <AdminSidebar pendingCount={pendingCount ?? 0} />
-      <main className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8">{children}</div>
+      <main className="flex-1 overflow-auto print:overflow-visible">
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8 print:py-0">{children}</div>
       </main>
     </div>
   );

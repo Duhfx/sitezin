@@ -8,7 +8,7 @@ export const influencer = {
     "Uma paulistana em Blumenau há quase 9 anos ✨ Conhecendo SC um lugar de cada vez. Me acompanha nessa jornada?",
   nicho: "Lifestyle & Viagens",
   publicoAlvo: "Mulheres de 18 a 35 anos, Região Sul e Sudeste",
-  localizacao: "Blumenau, SC · São Paulo, SP",
+  localizacao: "Blumenau/SC",
 
   // Distribuição geográfica do público — edite com seus dados reais do Instagram Insights.
   topEstados: [
