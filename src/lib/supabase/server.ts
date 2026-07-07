@@ -1,6 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
+
+// Cliente de leitura SEM cookies. Não chama cookies()/headers(), então páginas
+// que só renderizam conteúdo público (cupons ativos, perfil singleton) podem ser
+// prerenderizadas (estático/ISR) em vez de dinâmicas a cada request. Usa a secret
+// key (ignora RLS) — use apenas para conteúdo público, igual para todos.
+export function createReadClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
 
 export async function createClient() {
   const cookieStore = await cookies();

@@ -153,6 +153,7 @@ export async function salvarPerfil(formData: FormData) {
   }
 
   revalidatePath("/admin/perfil");
+  revalidatePath("/midia-kit");
   return { ok: true };
 }
 
@@ -347,6 +348,7 @@ export async function salvarSincronizacao(payload: SyncPayload) {
   await upsertMetricsDoMes(supabase, payload.metrics);
 
   revalidatePath("/admin/perfil");
+  revalidatePath("/midia-kit");
   return { ok: true };
 }
 
@@ -546,5 +548,6 @@ export async function salvarSincronizacaoTiktok(payload: SyncPayload) {
   await upsertMetricsDoMes(supabase, payload.metrics);
 
   revalidatePath("/admin/perfil");
+  revalidatePath("/midia-kit");
   return { ok: true };
 }

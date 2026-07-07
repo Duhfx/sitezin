@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createReadClient } from "@/lib/supabase/server";
 import type { Coupon } from "@/types/database";
 
 /**
@@ -7,7 +7,7 @@ import type { Coupon } from "@/types/database";
  * mesmo a admin logada vendo a página pública, só apareçam cupons ativos.
  */
 export async function getCuponsAtivos(): Promise<Coupon[]> {
-  const supabase = await createClient();
+  const supabase = createReadClient();
   const { data, error } = await supabase
     .from("coupons")
     .select("*")

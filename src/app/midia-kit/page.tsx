@@ -4,9 +4,13 @@ import RequestForm from "@/components/public/RequestForm";
 import PublicHeader from "@/components/public/PublicHeader";
 
 export const metadata: Metadata = { title: "Mídia Kit" };
-import { createServiceClient } from "@/lib/supabase/server";
+import { createReadClient } from "@/lib/supabase/server";
 import { PROFILE_ID, profileFromConfig } from "@/lib/influencer-profile";
 import { Lock } from "lucide-react";
+
+// Estático: servido do CDN. Invalida on-demand via revalidatePath("/midia-kit")
+// nas actions de perfil do admin.
+export const revalidate = false;
 
 const dentroDoKit = [
   "Seguidores no Instagram",
@@ -16,18 +20,13 @@ const dentroDoKit = [
 ];
 
 export default async function MidiaKitPage() {
-  const supabase = await createServiceClient();
+  const supabase = createReadClient();
   const { data, error } = await supabase
     .from("influencer_profile")
     .select("nome, foto_url, nicho")
     .eq("id", PROFILE_ID)
     .maybeSingle();
   if (error) console.error("[influencer_profile] erro na query:", error);
-  if (!data) {
-    console.warn("[influencer_profile] data é null, usando fallback");
-    const { data: todos } = await supabase.from("influencer_profile").select("id");
-    console.warn("[influencer_profile] linhas existentes:", todos);
-  }
   const perfil = data ?? profileFromConfig();
   return (
     <main className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">

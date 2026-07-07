@@ -51,6 +51,7 @@ export async function criarCupom(formData: FormData) {
   }
 
   revalidatePath("/admin/cupons");
+  revalidatePath("/cupons");
   redirect("/admin/cupons");
 }
 
@@ -102,6 +103,7 @@ export async function editarCupom(id: string, formData: FormData) {
   }
 
   revalidatePath("/admin/cupons");
+  revalidatePath("/cupons");
   redirect("/admin/cupons");
 }
 
@@ -121,6 +123,7 @@ export async function toggleAtivoCupom(id: string, ativo: boolean) {
   }
 
   revalidatePath("/admin/cupons");
+  revalidatePath("/cupons");
   return { ok: true };
 }
 
@@ -137,5 +140,6 @@ export async function removerCupom(id: string) {
   }
 
   revalidatePath("/admin/cupons");
+  revalidatePath("/cupons");
   return { ok: true };
 }

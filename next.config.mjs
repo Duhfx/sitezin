@@ -7,6 +7,10 @@ const nextConfig = {
     // dar 402, volte para `unoptimized: true` — processarImagem() (src/lib/upload.ts)
     // já entrega WebP leve servido direto pelo CDN do Supabase.
     unoptimized: false,
+    // Cache da imagem otimizada por 31 dias (o padrão herdaria o max-age=3600 do
+    // Supabase Storage e re-transformaria a cada hora — lento e gasta cota). Os
+    // arquivos têm nome UUID (imutáveis no mesmo path), então cache longo é seguro.
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       {
         protocol: "https",

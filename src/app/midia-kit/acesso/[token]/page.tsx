@@ -1,44 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import Image from "next/image";
 import { createServiceClient } from "@/lib/supabase/server";
 import { PROFILE_ID, profileFromConfig, toPresentation } from "@/lib/influencer-profile";
-import type { InfluencerMetrics } from "@/types/database";
 import MediaKitPresentation from "@/components/midia-kit/MediaKitPresentationEditorial";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function fmtNum(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString("pt-BR");
-}
-
-function fmtMonth(dateStr: string) {
-  const [year, month] = dateStr.split("-");
-  return new Date(Number(year), Number(month) - 1).toLocaleDateString("pt-BR", {
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function growthPct(current: number, prev: number | undefined) {
-  if (prev === undefined || prev === 0) return null;
-  return ((current - prev) / prev) * 100;
-}
-
-function GrowthBadge({ pct }: { pct: number | null }) {
-  if (pct === null) return null;
-  const color =
-    pct > 0 ? "text-success" : pct < 0 ? "text-destructive" : "text-muted-foreground";
-  return (
-    <span className={`text-xs ${color}`}>
-      {pct >= 0 ? "+" : ""}
-      {pct.toFixed(1)}%
-    </span>
-  );
-}
 
 // ─── Metadata (preview em WhatsApp/redes) ─────────────────────────────────────
 // `title.absolute` ignora o template "Aline — %s" do layout raiz. `robots` marca
@@ -87,7 +52,6 @@ export default async function MidiaKitAcessoPage({
     notFound();
   }
 
-  // Registra visualização
   const headersList = headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0].trim() ??
@@ -95,29 +59,26 @@ export default async function MidiaKitAcessoPage({
     null;
   const userAgent = headersList.get("user-agent") ?? null;
 
-  await supabase
-    .from("media_kit_views")
-    .insert({ access_id: acesso.id, ip, user_agent: userAgent });
-
-  // Busca perfil (conteúdo estático cadastrável) — fallback para o config
-  const { data: perfilRow } = await supabase
-    .from("influencer_profile")
-    .select("*")
-    .eq("id", PROFILE_ID)
-    .maybeSingle();
+  // Registro de view + leituras de perfil e métricas em paralelo (antes eram 3
+  // round-trips seriais ao Supabase). A view é independente do render, mas roda
+  // no mesmo Promise.all para ser garantidamente gravada sem virar hop extra —
+  // como é mais rápida que os SELECTs, não adiciona latência.
+  const [, { data: perfilRow }, { data: metricas }] = await Promise.all([
+    supabase
+      .from("media_kit_views")
+      .insert({ access_id: acesso.id, ip, user_agent: userAgent }),
+    supabase
+      .from("influencer_profile")
+      .select("*")
+      .eq("id", PROFILE_ID)
+      .maybeSingle(),
+    supabase
+      .from("influencer_metrics")
+      .select("*")
+      .order("reference_month", { ascending: true }),
+  ]);
 
   const influencer = toPresentation(perfilRow ?? profileFromConfig());
-
-  // Busca métricas
-  const { data: metricas } = await supabase
-    .from("influencer_metrics")
-    .select("*")
-    .order("reference_month", { ascending: true });
-
-  const ultimaMetrica: InfluencerMetrics | null =
-    metricas && metricas.length > 0 ? metricas[metricas.length - 1] : null;
-
-  const historicoDesc = metricas ? [...metricas].reverse() : [];
 
   return <MediaKitPresentation influencer={influencer} metricas={metricas || []} />;
 }

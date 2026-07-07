@@ -6,6 +6,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Cupons" };
 
+// Estático: servido do CDN. Invalida on-demand via revalidatePath("/cupons") nas
+// actions do admin (criar/editar/toggle/remover cupom).
+export const revalidate = false;
+
 export default async function CuponsPage() {
   const cupons = await getCuponsAtivos();
 
