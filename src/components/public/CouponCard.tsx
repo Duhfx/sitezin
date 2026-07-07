@@ -27,13 +27,13 @@ export default function CouponCard({ coupon, index = 0 }: { coupon: Coupon; inde
       className="group relative flex flex-col justify-between overflow-hidden rounded-3xl glass-card border border-border/50 p-6 sm:p-8 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1"
     >
       {/* Glow effect on hover */}
-      <div className="absolute -inset-2 bg-gradient-to-r from-primary/10 to-accent2/10 rounded-3xl blur-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 -z-10" />
+      <div className="hidden lg:block absolute -inset-2 bg-gradient-to-r from-primary/10 to-accent2/10 rounded-3xl blur-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 -z-10" />
 
       <div className="flex flex-col h-full gap-6 z-10">
         
         {/* Header: Logo & Brand */}
         <div className="flex items-center gap-5">
-          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
+          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background/50 lg:backdrop-blur-sm shadow-sm overflow-hidden">
             {coupon.logo_url ? (
               <Image
                 src={coupon.logo_url}

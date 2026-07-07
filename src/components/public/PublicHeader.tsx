@@ -15,7 +15,7 @@ export default function PublicHeader() {
   return (
     <header className="fixed top-0 inset-x-0 z-50">
       <div className="mx-auto max-w-5xl px-4 pt-4">
-        <nav className="flex items-center justify-center gap-1 rounded-2xl border border-border/60 bg-background/80 backdrop-blur-md px-2 py-2 shadow-sm">
+        <nav className="flex items-center justify-center gap-1 rounded-2xl border border-border/60 bg-background/80 lg:backdrop-blur-md px-2 py-2 shadow-sm">
           {links.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || (href === "/cupons" && pathname === "/");
             return (

@@ -68,7 +68,10 @@
 
 @layer utilities {
   .glass-card {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
+    /* backdrop-blur só no desktop (lg+): no Safari/WebKit mobile o backdrop-filter
+       é caríssimo e é usado em todos os cards de cupom/lista/form. bg-card/60
+       segura o visual translúcido sem o custo de GPU no mobile. */
+    @apply bg-card/60 lg:backdrop-blur-xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
   }
   .bg-grid-pattern {
     background-size: 40px 40px;

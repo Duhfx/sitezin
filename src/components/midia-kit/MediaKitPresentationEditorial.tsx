@@ -490,7 +490,7 @@ export default function MediaKitPresentationEditorial({
                           aria-label={`Abrir reel ${i + 1} no Instagram`}
                           className="absolute inset-0 z-10 flex items-start justify-end p-3"
                         >
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-slate-700 backdrop-blur">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-slate-700 lg:backdrop-blur">
                             <ArrowUpRight className="h-4 w-4" />
                           </span>
                         </a>

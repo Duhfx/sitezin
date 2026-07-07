@@ -22,7 +22,7 @@ export default function CouponList({ cupons }: { cupons: Coupon[] }) {
     <>
       {/* Busca */}
       <div className="w-full max-w-xl mx-auto relative group mb-16">
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent2/20 rounded-3xl blur-md opacity-50 transition-opacity group-focus-within:opacity-100" />
+        <div className="hidden lg:block absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent2/20 rounded-3xl blur-md opacity-50 transition-opacity group-focus-within:opacity-100" />
         <div className="relative glass-card flex items-center rounded-2xl p-2 border border-border/50">
           <div className="pl-4 pr-3">
             <Search className="w-5 h-5 text-muted-foreground" />
