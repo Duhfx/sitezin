@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Desliga a otimização on-the-fly do Vercel (/_next/image): a cota do plano
-    // estava estourando e retornando 402 (OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED),
-    // quebrando todas as imagens. Não é mais necessária porque processarImagem()
-    // (src/lib/upload.ts) já redimensiona + converte para WebP no upload, então os
-    // arquivos no Storage já são leves e servidos direto pelo CDN do Supabase.
-    unoptimized: true,
+    // Otimização on-the-fly do Vercel (/_next/image) reabilitada na homologação
+    // para validar se a cota restaurada aguenta. Foi desligada porque estourava a
+    // cota e retornava 402 (OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED). Se voltar a
+    // dar 402, volte para `unoptimized: true` — processarImagem() (src/lib/upload.ts)
+    // já entrega WebP leve servido direto pelo CDN do Supabase.
+    unoptimized: false,
     remotePatterns: [
       {
         protocol: "https",
