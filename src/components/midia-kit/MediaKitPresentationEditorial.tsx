@@ -207,7 +207,10 @@ export default function MediaKitPresentationEditorial({
       <section className="relative grid min-h-[100dvh] grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Coluna texto */}
         <div className="relative z-10 flex flex-col justify-between bg-[#F7F2EC] px-6 pt-16 pb-12 md:px-12 lg:px-16 lg:pt-20 lg:pb-16">
-          <div className="absolute -left-32 top-1/4 h-[420px] w-[420px] rounded-full bg-[#FF9A86]/15 blur-[120px]" />
+          {/* Glow decorativo: só no desktop. filter:blur() de raio alto trava o
+              paint no mobile (~6-7s pra abrir), e a 15% de opacidade quase não
+              se nota. hidden no mobile = zero custo de GPU lá. */}
+          <div className="hidden lg:block absolute -left-32 top-1/4 h-[420px] w-[420px] rounded-full bg-[#FF9A86]/15 blur-[120px]" />
 
           <div className="relative z-10 my-auto py-12">
             <h1 className="font-display text-[clamp(3.5rem,9vw,8rem)] font-light italic leading-[0.92] text-slate-800">
@@ -659,8 +662,8 @@ export default function MediaKitPresentationEditorial({
       {(influencer.contato.email || influencer.contato.whatsapp) && (
         <section className="px-6 pb-16 md:px-12">
           <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-[#FF9A86] px-8 py-16 md:px-16 md:py-24">
-            <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-white/15 blur-[90px]" />
-            <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-[#FF7A60]/30 blur-[70px]" />
+            <div className="hidden lg:block absolute right-0 top-0 h-80 w-80 rounded-full bg-white/15 blur-[90px]" />
+            <div className="hidden lg:block absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-[#FF7A60]/30 blur-[70px]" />
 
             <div className="relative z-10 flex flex-col items-start justify-between gap-12 lg:flex-row lg:items-end">
               <div>
