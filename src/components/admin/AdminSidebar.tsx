@@ -49,6 +49,12 @@ const IconTable = () => (
   </svg>
 );
 
+const IconActivity = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4 shrink-0">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
 const IconLogout = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4 shrink-0">
     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -63,6 +69,7 @@ const navItems: NavItem[] = [
   { href: "/admin/perfil", label: "Perfil", icon: <IconUser /> },
   { href: "/admin/precos", label: "Preços", icon: <IconTable /> },
   { href: "/admin/dashboard", label: "Dashboard", icon: <IconGrid /> },
+  { href: "/admin/acessos", label: "Acessos", icon: <IconActivity /> },
 ];
 
 export default function AdminSidebar({ pendingCount = 0 }: { pendingCount?: number }) {
