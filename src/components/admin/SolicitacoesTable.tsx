@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
+import { excluirSolicitacao } from "@/app/admin/(protected)/solicitacoes/actions";
 
 type Status = "pendente" | "aprovado" | "reprovado";
 
@@ -33,6 +35,20 @@ type Solicitacao = {
 
 export default function SolicitacoesTable({ solicitacoes }: { solicitacoes: Solicitacao[] }) {
   const router = useRouter();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleExcluir(id: string) {
+    startTransition(async () => {
+      const result = await excluirSolicitacao(id);
+      if (result.ok) {
+        setConfirmId(null);
+        router.refresh();
+      } else {
+        alert(result.error ?? "Erro ao excluir.");
+      }
+    });
+  }
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
@@ -85,8 +101,46 @@ export default function SolicitacoesTable({ solicitacoes }: { solicitacoes: Soli
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-xs font-medium text-primary">Ver →</span>
+                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  {confirmId === s.id ? (
+                    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                      <span className="text-xs text-muted-foreground">Excluir?</span>
+                      <button
+                        onClick={() => handleExcluir(s.id)}
+                        disabled={isPending}
+                        className="text-xs font-semibold text-destructive underline-offset-2 hover:underline disabled:opacity-60"
+                      >
+                        {isPending ? "…" : "Sim"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(null)}
+                        disabled={isPending}
+                        className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-60"
+                      >
+                        Não
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-3 whitespace-nowrap">
+                      <button
+                        onClick={() => router.push(`/admin/solicitacoes/${s.id}`)}
+                        className="text-xs font-medium text-primary"
+                      >
+                        Ver →
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(s.id)}
+                        aria-label="Excluir solicitação"
+                        title="Excluir solicitação"
+                        className="text-muted-foreground transition-colors hover:text-destructive"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                        </svg>
+                      </button>
+                    </span>
+                  )}
                 </td>
               </tr>
             );

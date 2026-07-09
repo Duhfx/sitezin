@@ -89,6 +89,44 @@ export async function revogarAcesso(accessId: string, requestId?: string) {
   return { ok: true };
 }
 
+// Exclui a solicitação inteira. FKs media_kit_access → requests e
+// media_kit_views → access são `on delete cascade`, então acesso e histórico de
+// visitas somem junto — irreversível.
+export async function excluirSolicitacao(id: string) {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("media_kit_requests")
+    .delete()
+    .eq("id", id);
+
+  if (error) return { ok: false, error: "Erro ao excluir solicitação." };
+
+  revalidatePath("/admin/solicitacoes");
+  revalidatePath("/admin/acessos");
+  return { ok: true };
+}
+
+// Exclui o acesso de vez (não só revoga). O FK media_kit_views → access é
+// `on delete cascade`, então as views registradas somem junto — irreversível.
+export async function excluirAcesso(accessId: string, requestId?: string) {
+  if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("media_kit_access")
+    .delete()
+    .eq("id", accessId);
+
+  if (error) return { ok: false, error: "Erro ao excluir acesso." };
+
+  revalidatePath("/admin/solicitacoes");
+  revalidatePath("/admin/acessos");
+  if (requestId) revalidatePath(`/admin/solicitacoes/${requestId}`);
+  return { ok: true };
+}
+
 export async function gerarLinkDireto(
   label: string,
   expiresAtDate?: string,

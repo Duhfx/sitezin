@@ -6,11 +6,12 @@ import {
   aprovarSolicitacao,
   reprovarSolicitacao,
   revogarAcesso,
+  excluirAcesso,
 } from "@/app/admin/(protected)/solicitacoes/actions";
 
 type Props =
   | { tipo: "pendente"; requestId: string }
-  | { tipo: "revogar"; accessId: string; requestId: string };
+  | { tipo: "revogar"; accessId: string; requestId: string; ativo: boolean };
 
 function validadePadrao() {
   const d = new Date();
@@ -25,6 +26,7 @@ export default function SolicitacaoAcoes(props: Props) {
   const [validade, setValidade] = useState(validadePadrao());
   const [confirmReprovar, setConfirmReprovar] = useState(false);
   const [confirmRevogar, setConfirmRevogar] = useState(false);
+  const [confirmExcluir, setConfirmExcluir] = useState(false);
 
   function handleAprovar() {
     if (props.tipo !== "pendente") return;
@@ -59,6 +61,19 @@ export default function SolicitacaoAcoes(props: Props) {
       const result = await revogarAcesso(props.accessId, props.requestId);
       if (result.ok) {
         setSuccessMsg("Acesso revogado com sucesso.");
+      } else {
+        setError(result.error ?? "Erro desconhecido.");
+      }
+    });
+  }
+
+  function handleExcluir() {
+    if (props.tipo !== "revogar") return;
+    setError("");
+    startTransition(async () => {
+      const result = await excluirAcesso(props.accessId, props.requestId);
+      if (result.ok) {
+        setSuccessMsg("Acesso excluído. O histórico de visitas foi apagado.");
       } else {
         setError(result.error ?? "Erro desconhecido.");
       }
@@ -131,35 +146,74 @@ export default function SolicitacaoAcoes(props: Props) {
       )}
 
       {props.tipo === "revogar" && (
-        <>
-          {confirmRevogar ? (
-            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 space-y-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">Revogar o acesso?</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  O link do mídia kit deixará de funcionar imediatamente.
-                </p>
+        <div className="space-y-4">
+          {/* Revogar — só faz sentido enquanto o acesso está ativo */}
+          {props.ativo &&
+            (confirmRevogar ? (
+              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Revogar o acesso?</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    O link do mídia kit deixará de funcionar imediatamente. O histórico de visitas é
+                    mantido.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="destructive" onClick={handleRevogar} disabled={isPending}>
+                    {isPending ? "Revogando…" : "Sim, revogar"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmRevogar(false)}
+                    disabled={isPending}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="destructive" onClick={handleRevogar} disabled={isPending}>
-                  {isPending ? "Revogando…" : "Sim, revogar"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setConfirmRevogar(false)}
-                  disabled={isPending}
-                >
-                  Cancelar
-                </Button>
+            ) : (
+              <Button variant="destructive" onClick={() => setConfirmRevogar(true)} disabled={isPending}>
+                Revogar acesso
+              </Button>
+            ))}
+
+          {/* Excluir de vez — disponível mesmo já revogado; apaga o histórico */}
+          <div className={props.ativo ? "border-t border-border pt-4" : ""}>
+            {confirmExcluir ? (
+              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Excluir o acesso?</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    O link some para sempre e o histórico de visitas dele é apagado. Não dá pra
+                    desfazer.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="destructive" onClick={handleExcluir} disabled={isPending}>
+                    {isPending ? "Excluindo…" : "Sim, excluir"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmExcluir(false)}
+                    disabled={isPending}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <Button variant="destructive" onClick={() => setConfirmRevogar(true)} disabled={isPending}>
-              Revogar acesso
-            </Button>
-          )}
-        </>
+            ) : (
+              <button
+                onClick={() => setConfirmExcluir(true)}
+                disabled={isPending}
+                className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:opacity-60"
+              >
+                Excluir acesso permanentemente
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {error && (

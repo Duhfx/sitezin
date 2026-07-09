@@ -152,10 +152,15 @@ export default async function DetalheSolicitacaoPage({
           </Card>
         )}
 
-        {req.status === "aprovado" && acessoAtivo && (
+        {req.status === "aprovado" && acesso && (
           <Card>
             <h2 className="mb-4 text-sm font-semibold text-foreground">Ações</h2>
-            <SolicitacaoAcoes tipo="revogar" accessId={acesso!.id} requestId={req.id} />
+            <SolicitacaoAcoes
+              tipo="revogar"
+              accessId={acesso.id}
+              requestId={req.id}
+              ativo={!!acessoAtivo}
+            />
           </Card>
         )}
       </div>

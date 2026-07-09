@@ -6,6 +6,7 @@ import CopiarLink from "@/components/admin/CopiarLink";
 import {
   gerarLinkDireto,
   revogarAcesso,
+  excluirAcesso,
 } from "@/app/admin/(protected)/solicitacoes/actions";
 import type { MediaKitAccess } from "@/types/database";
 
@@ -23,12 +24,15 @@ function LinkDiretoItem({
   link,
   appUrl,
   onRevoke,
+  onDelete,
 }: {
   link: MediaKitAccess;
   appUrl: string;
   onRevoke: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const [confirmRevogar, setConfirmRevogar] = useState(false);
+  const [confirmExcluir, setConfirmExcluir] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
@@ -41,6 +45,18 @@ function LinkDiretoItem({
       const result = await revogarAcesso(link.id);
       if (result.ok) {
         onRevoke(link.id);
+      } else {
+        setError(result.error ?? "Erro desconhecido.");
+      }
+    });
+  }
+
+  function handleExcluir() {
+    setError("");
+    startTransition(async () => {
+      const result = await excluirAcesso(link.id);
+      if (result.ok) {
+        onDelete(link.id);
       } else {
         setError(result.error ?? "Erro desconhecido.");
       }
@@ -70,48 +86,71 @@ function LinkDiretoItem({
         </span>
       </div>
 
-      {ativo && (
-        <>
-          <CopiarLink link={linkUrl} />
-          <div>
-            {confirmRevogar ? (
-              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2 space-y-2">
-                <p className="text-xs font-medium text-foreground">
-                  Revogar este link?
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={handleRevogar}
-                    disabled={isPending}
-                  >
-                    {isPending ? "Revogando…" : "Sim, revogar"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setConfirmRevogar(false)}
-                    disabled={isPending}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            ) : (
+      {ativo && <CopiarLink link={linkUrl} />}
+
+      <div>
+        {confirmRevogar ? (
+          <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2 space-y-2">
+            <p className="text-xs font-medium text-foreground">Revogar este link?</p>
+            <p className="text-xs text-muted-foreground">
+              O link para de funcionar; o histórico de visitas é mantido.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="destructive" onClick={handleRevogar} disabled={isPending}>
+                {isPending ? "Revogando…" : "Sim, revogar"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setConfirmRevogar(false)}
+                disabled={isPending}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : confirmExcluir ? (
+          <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2 space-y-2">
+            <p className="text-xs font-medium text-foreground">Excluir este link?</p>
+            <p className="text-xs text-muted-foreground">
+              Some para sempre e apaga o histórico de visitas dele. Não dá pra desfazer.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="destructive" onClick={handleExcluir} disabled={isPending}>
+                {isPending ? "Excluindo…" : "Sim, excluir"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setConfirmExcluir(false)}
+                disabled={isPending}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            {ativo && (
               <button
                 onClick={() => setConfirmRevogar(true)}
-                className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
+                disabled={isPending}
+                className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:opacity-60"
               >
                 Revogar
               </button>
             )}
-            {error && (
-              <p className="text-xs text-destructive mt-1">{error}</p>
-            )}
+            <button
+              onClick={() => setConfirmExcluir(true)}
+              disabled={isPending}
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:opacity-60"
+            >
+              Excluir
+            </button>
           </div>
-        </>
-      )}
+        )}
+        {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+      </div>
     </div>
   );
 }
@@ -151,6 +190,10 @@ export default function LinksDiretosPanel({
         l.id === id ? { ...l, revoked_at: new Date().toISOString() } : l,
       ),
     );
+  }
+
+  function handleDelete(id: string) {
+    setLinks((prev) => prev.filter((l) => l.id !== id));
   }
 
   return (
@@ -238,6 +281,7 @@ export default function LinksDiretosPanel({
               link={link}
               appUrl={appUrl}
               onRevoke={handleRevoke}
+              onDelete={handleDelete}
             />
           ))}
         </div>
