@@ -4,7 +4,10 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 // Aba /contato: registra o clique e redireciona para o WhatsApp da Aline.
 // Rota pública (sem sessão) — usa o service client, igual à página do mídia kit
-// por token. headers() já torna a rota dinâmica (roda a cada clique).
+// por token. force-dynamic + Cache-Control: no-store garantem que a função rode
+// a CADA clique: sem isso o navegador cacheia o redirect 307 e reusa sem bater
+// no servidor (o clique não é logado).
+export const dynamic = "force-dynamic";
 
 const WHATSAPP_NUMERO = "351927174100"; // +351 927 174 100
 const MENSAGEM =
@@ -28,5 +31,7 @@ export async function GET() {
   }
 
   const url = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(MENSAGEM)}`;
-  return NextResponse.redirect(url);
+  const res = NextResponse.redirect(url);
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }
