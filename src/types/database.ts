@@ -194,6 +194,20 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["influencer_profile"]["Insert"]>;
         Relationships: [];
       };
+      contact_clicks: {
+        Row: {
+          id: string;
+          clicked_at: string;
+          ip: string | null;
+          user_agent: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["contact_clicks"]["Row"], "id" | "clicked_at"> & {
+          id?: string;
+          clicked_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["contact_clicks"]["Insert"]>;
+        Relationships: [];
+      };
       sync_logs: {
         Row: {
           id: string;
@@ -248,3 +262,4 @@ export type MediaKitView = Database["public"]["Tables"]["media_kit_views"]["Row"
 export type InfluencerMetrics = Database["public"]["Tables"]["influencer_metrics"]["Row"];
 export type InfluencerProfile = Database["public"]["Tables"]["influencer_profile"]["Row"];
 export type SyncLog = Database["public"]["Tables"]["sync_logs"]["Row"];
+export type ContactClick = Database["public"]["Tables"]["contact_clicks"]["Row"];
