@@ -30,7 +30,11 @@ export async function GET() {
     // ponytail: silencioso de propósito — o redirect é o que importa.
   }
 
-  const url = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(MENSAGEM)}`;
+  // Aponta direto pro api.whatsapp.com — NÃO usar wa.me: o redirect interno dele
+  // corrompe o emoji percent-encoded (%F0%9F%98%8A vira %EF%BF%BD, o "�"/"?").
+  const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMERO}&text=${encodeURIComponent(
+    MENSAGEM,
+  )}&type=phone_number&app_absent=0`;
   const res = NextResponse.redirect(url);
   res.headers.set("Cache-Control", "no-store");
   return res;
