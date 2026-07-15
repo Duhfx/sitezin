@@ -4,6 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 // Lista as visitas mais recentes + total. IPs únicos é uma aproximação de
 // pessoas (mesma ressalva da página de Acessos).
 
+// Rótulo de dispositivo a partir do user-agent. Heurística simples de regex —
+// cobre os casos comuns (celular > desktop). iPad manda "Macintosh" nos UAs
+// recentes, mas com "Mobile"/touch: tratado antes do Mac.
+function dispositivo(ua: string | null): string {
+  if (!ua) return "—";
+  if (/iPhone/i.test(ua)) return "iPhone";
+  if (/iPad/i.test(ua)) return "iPad";
+  if (/Android/i.test(ua)) return /Mobile/i.test(ua) ? "Android" : "Android (tablet)";
+  if (/Windows/i.test(ua)) return "Windows";
+  if (/Macintosh|Mac OS X/i.test(ua)) return "Mac";
+  if (/Linux/i.test(ua)) return "Linux";
+  return "Outro";
+}
+
 function fmtData(dateStr: string): string {
   return new Date(dateStr).toLocaleString("pt-BR", {
     timeZone: "America/Sao_Paulo", // Server Component roda em UTC no Vercel
@@ -69,8 +83,8 @@ export default async function ContatoPage() {
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-foreground">{fmtData(c.clicked_at)}</td>
                   <td className="px-4 py-3 text-muted-foreground">{c.ip ?? "—"}</td>
-                  <td className="px-4 py-3 max-w-[320px] truncate text-muted-foreground" title={c.user_agent ?? ""}>
-                    {c.user_agent ?? "—"}
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground" title={c.user_agent ?? ""}>
+                    {dispositivo(c.user_agent)}
                   </td>
                 </tr>
               ))}
