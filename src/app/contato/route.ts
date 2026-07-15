@@ -21,13 +21,23 @@ export async function GET() {
     null;
   const userAgent = headersList.get("user-agent") ?? null;
 
+  // Bots que pré-buscam o link (crawler da Meta pro preview da bio, WhatsApp,
+  // Google etc.) não são cliques reais — inflam o log. Não registra esses.
+  const isBot =
+    !!userAgent &&
+    /bot|crawl|spider|facebookexternalhit|meta-|whatsapp|preview|slurp|bingpreview|embedly|telegrambot|discordbot|skypeuripreview|python-requests|curl|wget|headless/i.test(
+      userAgent,
+    );
+
   // Loga antes de redirecionar. Best-effort: falha no insert não deve impedir o
   // usuário de chegar no WhatsApp.
-  try {
-    const supabase = await createServiceClient();
-    await supabase.from("contact_clicks").insert({ ip, user_agent: userAgent });
-  } catch {
-    // ponytail: silencioso de propósito — o redirect é o que importa.
+  if (!isBot) {
+    try {
+      const supabase = await createServiceClient();
+      await supabase.from("contact_clicks").insert({ ip, user_agent: userAgent });
+    } catch {
+      // ponytail: silencioso de propósito — o redirect é o que importa.
+    }
   }
 
   // Aponta direto pro api.whatsapp.com — NÃO usar wa.me: o redirect interno dele
