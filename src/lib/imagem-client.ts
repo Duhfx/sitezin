@@ -7,8 +7,14 @@
 // Mesmas dimensão/qualidade do servidor (src/lib/upload.ts) — reprocessar depois
 // não perde nada além de um reencode.
 
-const MAX_DIMENSAO = 1600;
-const QUALIDADE = 0.8;
+// Dimensão igual à do servidor (src/lib/upload.ts) — se o client cortar menos, o
+// sharp corta de novo e a foto passa por dois resizes.
+const MAX_DIMENSAO = 2400;
+// Mais alta que a do servidor de propósito: este encode é intermediário, e o
+// servidor ainda vai reencodar em WebP q85. Duas gerações na mesma qualidade
+// perdem duas vezes; a primeira quase transparente deixa a perda praticamente
+// só na final. Custa ~200 KB a mais no corpo do POST, que é gratuito aqui.
+const QUALIDADE = 0.92;
 
 // Teto do arquivo ORIGINAL (antes de comprimir). Só existe pra barrar absurdo —
 // um RAW de 80 MB trava o browser no decode. O limite que importa é o do

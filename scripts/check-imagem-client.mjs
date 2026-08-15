@@ -64,9 +64,10 @@ try {
   assert.strictEqual(out.texto, "Aline", "campo de texto foi alterado");
   assert.strictEqual(out.tipo, "image/webp");
   assert.strictEqual(out.nome, "IMG_1234.webp", "extensão deve acompanhar o formato");
-  assert.strictEqual(out.w, 1600, "lado maior deve virar 1600");
-  assert.strictEqual(out.h, 1200, "proporção deve ser preservada");
-  assert.ok(out.bytes < 1024 * 1024, `saída deveria ficar abaixo de 1 MB, veio ${out.bytes}`);
+  assert.strictEqual(out.w, 2400, "lado maior deve virar MAX_DIMENSAO");
+  assert.strictEqual(out.h, 1800, "proporção deve ser preservada");
+  // Teto folgado: o que importa é caber no bodySizeLimit (8 MB) com 7 imagens.
+  assert.ok(out.bytes < 3 * 1024 * 1024, `saída deveria ficar abaixo de 3 MB, veio ${out.bytes}`);
 
   console.log(`OK — ${(out.entrada / 1024 / 1024).toFixed(1)} MB -> ${(out.bytes / 1024).toFixed(0)} KB em ${out.ms} ms`);
 } finally {

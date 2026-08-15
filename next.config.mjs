@@ -5,10 +5,12 @@ const nextConfig = {
   // o PDF do mídia kit (src/app/api/midia-kit/pdf/route.ts).
   experimental: {
     // O padrão é 1 MB e o form do perfil envia até 7 imagens de uma vez. Elas já
-    // chegam comprimidas do browser (~300 KB cada, ver src/lib/imagem-client.ts),
-    // mas o padrão não dava folga nem pra uma foto de celular — o Next cortava o
-    // corpo antes da action rodar e o upload falhava em silêncio.
-    serverActions: { bodySizeLimit: "8mb" },
+    // chegam comprimidas do browser (ver src/lib/imagem-client.ts), mas o padrão
+    // não dava folga nem pra uma foto de celular — o Next cortava o corpo antes
+    // da action rodar e o upload falhava em silêncio. 24 MB cobre 7 fotos no pior
+    // caso de compressão (~2,4 MB cada, medido em scripts/check-imagem-client.mjs);
+    // a Vercel aceita corpo de até 100 MB.
+    serverActions: { bodySizeLimit: "24mb" },
     serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
     // O @sparticuz/chromium abre os .br de bin/ por caminho montado em runtime, e
     // o rastreamento de arquivos do Next não enxerga isso — sem esta linha a

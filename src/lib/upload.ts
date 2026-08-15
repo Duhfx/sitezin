@@ -11,8 +11,12 @@ export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
 
 // Maior dimensão (largura ou altura) que uma imagem pode ter depois de
 // processada. Imagens menores não são ampliadas (withoutEnlargement).
-const MAX_DIMENSAO = 1600;
-const WEBP_QUALIDADE = 80;
+// 2400 e não 1600: o hero e o lookbook são full-bleed e, num monitor grande com
+// DPR 2, 1600 já era menos pixel do que a tela pede — dava pra ver a diferença.
+// O peso extra fica no Storage, não no carregamento: o next/image reduz por
+// `sizes`. Quem paga é o PDF, que usa <img> direto.
+const MAX_DIMENSAO = 2400;
+const WEBP_QUALIDADE = 85;
 
 const EXT_POR_MIME = new Map<string, string>([
   ["image/jpeg", "jpg"],
