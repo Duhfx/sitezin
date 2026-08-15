@@ -323,26 +323,20 @@ export default function MediaKitDeckPdf({
     const bioLonga = influencer.biografia.length > 900;
     paginas.push({
       key: "bio",
-      // Sangria: a foto encosta na borda como no hero do site. Sem rodapé, então,
-      // igual à capa e ao lookbook — número de página em cima de foto fica sujo.
-      sangria: true,
+      // Só texto: a coluna de foto saiu (era o moodboard[0], que já aparece no
+      // lookbook). Sem sangria, então a página usa o recuo padrão e ganha rodapé
+      // numerado como as demais de conteúdo. `max-w` segura a medida do texto —
+      // parágrafo em 1280px de largura vira linha ilegível.
       conteudo: (
-        <div className="grid h-full" style={{ gridTemplateColumns: "0.58fr 0.42fr" }}>
-          <div className="flex flex-col justify-center py-16 pl-20 pr-16">
-            <h2 className="font-display text-[46px] font-light italic leading-tight text-slate-800">
-              Muito prazer,<br />sou a <span className="text-[#FF9A86]">{primeiroNome}.</span>
-            </h2>
-            <div className="my-7 h-px w-16 bg-[#FF9A86]" />
-            <div className={`space-y-4 font-light leading-relaxed text-slate-500 ${bioLonga ? "text-[15px]" : "text-[17px]"}`}>
-              {bioParagrafos.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
-            </div>
-          </div>
-          <div className="overflow-hidden bg-[#F7F2EC]">
-            {influencer.moodboard[0] && (
-              <Foto src={influencer.moodboard[0]} alt="Conteúdo editorial" className="h-full w-full object-cover" />
-            )}
+        <div className="max-w-[760px]">
+          <h2 className="font-display text-[46px] font-light italic leading-tight text-slate-800">
+            Muito prazer,<br />sou a <span className="text-[#FF9A86]">{primeiroNome}.</span>
+          </h2>
+          <div className="my-7 h-px w-16 bg-[#FF9A86]" />
+          <div className={`space-y-4 font-light leading-relaxed text-slate-500 ${bioLonga ? "text-[15px]" : "text-[17px]"}`}>
+            {bioParagrafos.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
           </div>
         </div>
       ),
