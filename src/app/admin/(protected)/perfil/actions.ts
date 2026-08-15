@@ -6,6 +6,7 @@ import { processarImagem } from "@/lib/upload";
 import { fetchInstagramData, shortcodeInstagram, type SyncStep } from "@/lib/instagram-sync";
 import { materializarThumbsReels } from "@/lib/reels-thumb";
 import { fetchTiktokData, refreshTiktokToken, TiktokAuthError } from "@/lib/tiktok-sync";
+import { POS_PADRAO, ZOOM_PADRAO, ZOOM_MAX } from "@/lib/influencer-profile";
 import type {
   AudienciaGenero,
   AudienciaIdade,
@@ -13,6 +14,7 @@ import type {
   Formato,
   InfluencerMetrics,
   InfluencerProfile,
+  MoodboardItem,
   Reel,
   TopEstado,
 } from "@/types/database";
@@ -65,6 +67,23 @@ function str(value: FormDataEntryValue | null): string {
   return String(value ?? "").trim();
 }
 
+// Enquadramento do moodboard: aceita só "N% N%" com N de 0 a 100. Qualquer outra
+// coisa vira o centro — o valor é interpolado num style inline no mídia kit e no
+// PDF, e o form é burlável.
+function posValida(valor: string): string {
+  const m = /^(\d{1,3})% (\d{1,3})%$/.exec(valor);
+  if (!m) return POS_PADRAO;
+  const [x, y] = [Number(m[1]), Number(m[2])];
+  return x <= 100 && y <= 100 ? `${x}% ${y}%` : POS_PADRAO;
+}
+
+// Zoom do mosaico: número entre 1 e ZOOM_MAX. Vai para dentro de um scale() no
+// style, mesma razão do posValida.
+function zoomValido(valor: string): number {
+  const n = Number(valor);
+  return Number.isFinite(n) && n >= 1 && n <= ZOOM_MAX ? Math.round(n * 100) / 100 : ZOOM_PADRAO;
+}
+
 export async function salvarPerfil(formData: FormData) {
   if (!(await requireUser())) return { ok: false, error: "Não autorizado." };
   const supabase = await createClient();
@@ -84,7 +103,7 @@ export async function salvarPerfil(formData: FormData) {
   }
 
   // ── Moodboard (3 imagens, posições fixas) ───────────────────────
-  const moodboard: string[] = [];
+  const moodboard: MoodboardItem[] = [];
   for (let i = 0; i < 3; i++) {
     let url = str(formData.get(`moodboard_url_atual_${i}`)) || "";
     const file = formData.get(`moodboard_${i}`) as File | null;
@@ -93,7 +112,16 @@ export async function salvarPerfil(formData: FormData) {
       if ("error" in result) return { ok: false, error: result.error };
       url = result.url;
     }
-    if (url) moodboard.push(url);
+    // `pos` é o object-position do mosaico (ver MoodboardMosaico). Validado no
+    // servidor porque vai para dentro de um style: só "N% N%" passa, o resto cai
+    // no centro.
+    if (url) {
+      moodboard.push({
+        url,
+        pos: posValida(str(formData.get(`moodboard_pos_${i}`))),
+        zoom: zoomValido(str(formData.get(`moodboard_zoom_${i}`))),
+      });
+    }
   }
 
   // ── Reels em destaque (até 3): print + link. Os números (views/likes/comments)

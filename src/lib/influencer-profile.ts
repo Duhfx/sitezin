@@ -1,5 +1,21 @@
 import { influencer } from "@/config/influencer";
-import type { InfluencerProfile } from "@/types/database";
+import type { InfluencerProfile, MoodboardItem } from "@/types/database";
+
+// Enquadramento padrão: centro e sem zoom — o que o object-fit: cover faz sozinho.
+export const POS_PADRAO = "50% 50%";
+export const ZOOM_PADRAO = 1;
+export const ZOOM_MAX = 3;
+
+// Aceita os dois formatos gravados no jsonb: string crua (antes do
+// enquadramento) e { url, pos }. Usada tanto na apresentação quanto no form do
+// admin — é o único lugar que sabe dessa dualidade.
+export function normalizarMoodboard(itens: MoodboardItem[] | null | undefined) {
+  return (itens ?? []).map((m) =>
+    typeof m === "string"
+      ? { url: m, pos: POS_PADRAO, zoom: ZOOM_PADRAO }
+      : { url: m.url, pos: m.pos || POS_PADRAO, zoom: m.zoom || ZOOM_PADRAO },
+  );
+}
 
 // UUID fixo da linha única — igual ao seed SQL e à Server Action.
 export const PROFILE_ID = "00000000-0000-0000-0000-000000000001";
@@ -65,6 +81,10 @@ function handleFromUrl(url: string | null): string {
 
 // Converte a linha do banco para o formato que MediaKitPresentation espera.
 export function toPresentation(p: InfluencerProfile) {
+  // Dois arrays paralelos em vez de um de objetos: os componentes de
+  // apresentação (e o preview /media-kit-v2) já recebiam `moodboard: string[]`,
+  // e um campo novo opcional não obriga ninguém a mudar.
+  const fotos = normalizarMoodboard(p.moodboard);
   return {
     nome: p.nome,
     foto: p.foto_url ?? "",
@@ -86,7 +106,9 @@ export function toPresentation(p: InfluencerProfile) {
     },
     formatos: p.formatos ?? [],
     cases: p.cases ?? [],
-    moodboard: p.moodboard ?? [],
+    moodboard: fotos.map((f) => f.url),
+    moodboardPos: fotos.map((f) => f.pos),
+    moodboardZoom: fotos.map((f) => f.zoom),
     // Só reels com capa. Entre cadastrar o link e o 1º sync (que baixa a capa do
     // IG) o reel fica sem thumb — não deve aparecer no mídia kit.
     reels: (p.reels ?? []).filter((r) => r.thumb),

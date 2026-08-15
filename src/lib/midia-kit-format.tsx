@@ -12,6 +12,32 @@
 // soma dos vídeos dos últimos N dias. Espelha JANELA_DIAS em src/lib/tiktok-sync.ts.
 export const TIKTOK_JANELA_DIAS = 28;
 
+// Enquadramento de uma foto do moodboard dentro da célula do mosaico, escolhido
+// no admin (MoodboardMosaico) e replicado aqui no mídia kit e no PDF — os três
+// TÊM que usar esta função, senão o que a pessoa enquadra não é o que sai.
+//
+// `pos` reposiciona o recorte do object-fit: cover; `zoom` amplia a partir desse
+// mesmo ponto (transform-origin = pos), então aproximar não desloca o assunto
+// que já estava enquadrado. Zoom 1 não emite transform nenhum.
+export function estiloFoto(pos?: string, zoom?: number): React.CSSProperties {
+  const z = zoom && zoom > 1 ? zoom : 1;
+  return {
+    objectPosition: pos,
+    ...(z > 1 ? { transform: `scale(${z})`, transformOrigin: pos ?? "50% 50%" } : {}),
+  };
+}
+
+// Inversa de estiloFoto, usada pelo editor: quantos px a imagem anda quando a
+// porcentagem de `pos` varia 1, num eixo. Duas parcelas, porque `pos` entra em
+// dois lugares — object-position, que percorre a sobra do cover (ampliada pelo
+// zoom), e transform-origin, que desloca (zoom-1) do tamanho da moldura. Sem
+// somar as duas, o arraste "foge" do cursor quando há zoom.
+// Resultado <= 0 = eixo travado (a imagem não sobra por ali).
+export function pxPorCento(natural: number, moldura: number, cover: number, zoom = 1) {
+  const z = zoom > 1 ? zoom : 1;
+  return (z * (natural * cover - moldura) + (z - 1) * moldura) / 100;
+}
+
 export function splitNum(n: number): { value: number; suffix: string; decimals: number } {
   if (n >= 1_000_000) {
     const v = parseFloat((n / 1_000_000).toFixed(1));

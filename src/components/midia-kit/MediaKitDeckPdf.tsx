@@ -24,7 +24,7 @@ import React from "react";
 import { MapPin, Mail } from "lucide-react";
 import WhatsappIcon from "@/components/icons/WhatsappIcon";
 import {
-  TIKTOK_JANELA_DIAS, chunk, fmtCompact, fmtWhatsapp, splitNicho,
+  TIKTOK_JANELA_DIAS, chunk, estiloFoto, fmtCompact, fmtWhatsapp, splitNicho,
   BigNumber, InstagramIcon, TikTokIcon,
 } from "@/lib/midia-kit-format";
 import type {
@@ -50,6 +50,10 @@ type InfluencerPresentation = {
   formatos: Formato[];
   cases: Case[];
   moodboard: string[];
+  // Enquadramento de cada foto do moodboard (arrays paralelos a `moodboard`),
+  // escolhido no admin. Ausente = centro, sem zoom.
+  moodboardPos?: string[];
+  moodboardZoom?: number[];
   reels?: Reel[];
   contato: { email: string; whatsapp: string };
 };
@@ -513,7 +517,11 @@ export default function MediaKitDeckPdf({
   // Sem título nem numeração: são páginas de fotografia sangrando até a borda —
   // é a coisa que mais depende de o PDF ser paginado de propósito.
   if (influencer.moodboard.length >= 3) {
-    chunk(influencer.moodboard, 3).forEach((trio, pagina) => {
+    const fotos = influencer.moodboard.map((url, i) => ({
+      url,
+      estilo: estiloFoto(influencer.moodboardPos?.[i], influencer.moodboardZoom?.[i]),
+    }));
+    chunk(fotos, 3).forEach((trio, pagina) => {
       paginas.push({
         key: `lookbook-${pagina}`,
         sangria: true,
@@ -521,26 +529,26 @@ export default function MediaKitDeckPdf({
           <div className="h-full bg-[#F7F2EC] p-10">
             {trio.length === 1 ? (
               <div className="h-full overflow-hidden rounded-[1.5rem]">
-                <Foto src={trio[0]} alt="Conteúdo editorial" className="h-full w-full object-cover" />
+                <Foto src={trio[0].url} alt="Conteúdo editorial" className="h-full w-full object-cover" style={trio[0].estilo} />
               </div>
             ) : trio.length === 2 ? (
               <div className="grid h-full grid-cols-2 gap-5">
-                {trio.map((src, i) => (
+                {trio.map((f, i) => (
                   <div key={i} className="overflow-hidden rounded-[1.5rem]">
-                    <Foto src={src} alt={`Conteúdo editorial ${i + 1}`} className="h-full w-full object-cover" />
+                    <Foto src={f.url} alt={`Conteúdo editorial ${i + 1}`} className="h-full w-full object-cover" style={f.estilo} />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="grid h-full gap-5" style={{ gridTemplateColumns: "5fr 7fr", gridTemplateRows: "3fr 2fr" }}>
+              <div className="grid h-full gap-5" style={{ gridTemplateColumns: "5fr 7fr", gridTemplateRows: "1fr 1fr" }}>
                 <div className="row-span-2 overflow-hidden rounded-[1.5rem]">
-                  <Foto src={trio[0]} alt="Conteúdo editorial 1" className="h-full w-full object-cover" />
+                  <Foto src={trio[0].url} alt="Conteúdo editorial 1" className="h-full w-full object-cover" style={trio[0].estilo} />
                 </div>
                 <div className="overflow-hidden rounded-[1.5rem]">
-                  <Foto src={trio[1]} alt="Conteúdo editorial 2" className="h-full w-full object-cover" />
+                  <Foto src={trio[1].url} alt="Conteúdo editorial 2" className="h-full w-full object-cover" style={trio[1].estilo} />
                 </div>
                 <div className="overflow-hidden rounded-[1.5rem]">
-                  <Foto src={trio[2]} alt="Conteúdo editorial 3" className="h-full w-full object-cover" />
+                  <Foto src={trio[2].url} alt="Conteúdo editorial 3" className="h-full w-full object-cover" style={trio[2].estilo} />
                 </div>
               </div>
             )}

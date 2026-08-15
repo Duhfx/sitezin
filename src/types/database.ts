@@ -121,7 +121,7 @@ export type Database = {
           youtube_url: string | null;
           formatos: Formato[];
           cases: Case[];
-          moodboard: string[];
+          moodboard: MoodboardItem[];
           reels: Reel[];
           email: string | null;
           whatsapp: string | null;
@@ -252,6 +252,12 @@ export type Reel = {
   // nunca deve ser persistida. Ver materializarThumbsReels em src/lib/reels-thumb.ts.
   thumbSource?: string;
 };
+// Foto do moodboard. `pos` é o object-position CSS ("50% 30%") escolhido no
+// admin arrastando a foto dentro da célula do mosaico — cada célula tem uma
+// proporção diferente, então o centro raramente é o melhor enquadramento.
+// A string crua é o formato antigo (sem enquadramento): as linhas gravadas antes
+// disso continuam válidas no jsonb, `normalizarMoodboard()` cobre as duas.
+export type MoodboardItem = string | { url: string; pos?: string; zoom?: number };
 export type AudienciaGenero = { label: string; pct: number };
 export type AudienciaIdade = { faixa: string; pct: number };
 

@@ -19,7 +19,7 @@ import type {
   TopEstado, Formato, Case, AudienciaGenero, AudienciaIdade, Reel,
 } from "@/types/database";
 import {
-  TIKTOK_JANELA_DIAS, fmtCompact, fmtWhatsapp, splitNicho,
+  TIKTOK_JANELA_DIAS, estiloFoto, fmtCompact, fmtWhatsapp, splitNicho,
   BigNumber, InstagramIcon, TikTokIcon,
 } from "@/lib/midia-kit-format";
 
@@ -42,6 +42,10 @@ type InfluencerPresentation = {
   formatos: Formato[];
   cases: Case[];
   moodboard: string[];
+  // Enquadramento de cada foto do moodboard, escolhido no admin (arrays
+  // paralelos a `moodboard`). Ausente = centro, sem zoom.
+  moodboardPos?: string[];
+  moodboardZoom?: number[];
   reels?: Reel[];
   contato: { email: string; whatsapp: string };
 };
@@ -464,34 +468,45 @@ export default function MediaKitPresentationEditorial({
       {/* LOOKBOOK — faixa de fotografia full-bleed */}
       {influencer.moodboard.length >= 3 && (
         <section className="relative overflow-hidden bg-[#F7F2EC] py-20 md:py-28">
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 px-6 md:grid-cols-12 md:px-12">
-            <Reveal className="relative aspect-[3/4] overflow-hidden rounded-[1.5rem] md:col-span-5">
-              <Image
-                src={influencer.moodboard[0]}
-                alt="Conteúdo editorial 1"
-                fill
-                sizes="(min-width: 768px) 42vw, 100vw"
-                className="object-cover"
-              />
-            </Reveal>
-            <Reveal delay={100} className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] md:col-span-7 md:mt-16">
-              <Image
-                src={influencer.moodboard[1]}
-                alt="Conteúdo editorial 2"
-                fill
-                sizes="(min-width: 768px) 58vw, 100vw"
-                className="object-cover"
-              />
-            </Reveal>
-            <Reveal delay={200} className="relative aspect-[16/10] overflow-hidden rounded-[1.5rem] md:col-span-12">
-              <Image
-                src={influencer.moodboard[2]}
-                alt="Conteúdo editorial 3"
-                fill
-                sizes="(min-width: 768px) 1152px, 100vw"
-                className="object-cover"
-              />
-            </Reveal>
+          {/* Mesmo mosaico da página de lookbook do PDF (MediaKitDeckPdf):
+              colunas 5fr/7fr, linhas de altura igual, retrato alto à esquerda. O
+              `aspect` do container reproduz a área útil da folha 16:9 (1200x640)
+              — é ele que dá altura às células, então cada foto volta a
+              `aspect-auto` no md. No mobile o grid vira coluna e cada foto
+              recupera o próprio aspect. */}
+          <div className="mx-auto max-w-6xl px-6 md:px-12">
+            <div className="grid grid-cols-1 gap-5 md:aspect-[15/8] md:grid-cols-[5fr_7fr] md:grid-rows-[1fr_1fr]">
+              <Reveal className="relative aspect-[3/4] overflow-hidden rounded-[1.5rem] md:aspect-auto md:row-span-2">
+                <Image
+                  src={influencer.moodboard[0]}
+                  alt="Conteúdo editorial 1"
+                  fill
+                  sizes="(min-width: 768px) 40vw, 100vw"
+                  className="object-cover"
+                  style={estiloFoto(influencer.moodboardPos?.[0], influencer.moodboardZoom?.[0])}
+                />
+              </Reveal>
+              <Reveal delay={100} className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem] md:aspect-auto">
+                <Image
+                  src={influencer.moodboard[1]}
+                  alt="Conteúdo editorial 2"
+                  fill
+                  sizes="(min-width: 768px) 56vw, 100vw"
+                  className="object-cover"
+                  style={estiloFoto(influencer.moodboardPos?.[1], influencer.moodboardZoom?.[1])}
+                />
+              </Reveal>
+              <Reveal delay={200} className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem] md:aspect-auto">
+                <Image
+                  src={influencer.moodboard[2]}
+                  alt="Conteúdo editorial 3"
+                  fill
+                  sizes="(min-width: 768px) 56vw, 100vw"
+                  className="object-cover"
+                  style={estiloFoto(influencer.moodboardPos?.[2], influencer.moodboardZoom?.[2])}
+                />
+              </Reveal>
+            </div>
           </div>
         </section>
       )}

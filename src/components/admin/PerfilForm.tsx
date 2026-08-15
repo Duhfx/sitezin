@@ -13,7 +13,8 @@ import Textarea from "@/components/ui/Textarea";
 import { cn } from "@/lib/utils";
 import { comprimirImagensDoForm } from "@/lib/imagem-client";
 import { salvarPerfil } from "@/app/admin/(protected)/perfil/actions";
-import { PROFILE_ID, toPresentation } from "@/lib/influencer-profile";
+import { PROFILE_ID, POS_PADRAO, ZOOM_PADRAO, normalizarMoodboard, toPresentation } from "@/lib/influencer-profile";
+import MoodboardMosaico, { type FotoMoodboard } from "@/components/admin/MoodboardMosaico";
 import MediaKitPresentation from "@/components/midia-kit/MediaKitPresentation";
 
 // Índice das seções: alimenta a navegação sticky e dá âncora a cada bloco.
@@ -59,13 +60,13 @@ export default function PerfilForm({ initialData, metricas }: Props) {
   const [formatos, setFormatos] = useState<Formato[]>(initialData.formatos ?? []);
   const [cases, setCases] = useState<Case[]>(initialData.cases ?? []);
 
-  const moodboardInicial = initialData.moodboard ?? [];
+  // 3 slots fixos: normaliza o formato antigo (string crua) e completa o que
+  // faltar, para o mosaico ter sempre as 3 células.
+  const moodboardInicial = normalizarMoodboard(initialData.moodboard);
   const [fotoPreview, setFotoPreview] = useState<string | null>(initialData.foto_url ?? null);
-  const [moodboardPreviews, setMoodboardPreviews] = useState<(string | null)[]>([
-    moodboardInicial[0] ?? null,
-    moodboardInicial[1] ?? null,
-    moodboardInicial[2] ?? null,
-  ]);
+  const [moodboardFotos, setMoodboardFotos] = useState<FotoMoodboard[]>(() =>
+    [0, 1, 2].map((i) => moodboardInicial[i] ?? { url: "", pos: POS_PADRAO, zoom: ZOOM_PADRAO }),
+  );
 
   // Reels em destaque: 3 slots. Print + link editáveis; métricas vêm do sync.
   const reelsInicial = initialData.reels ?? [];
@@ -133,7 +134,7 @@ export default function PerfilForm({ initialData, metricas }: Props) {
       audiencia_idade: audienciaIdade,
       formatos,
       cases,
-      moodboard: moodboardPreviews.filter(Boolean) as string[],
+      moodboard: moodboardFotos.filter((f) => f.url),
       reels: [0, 1, 2]
         .map((i) => ({
           thumb: reelPreviews[i] ?? "",
@@ -501,39 +502,15 @@ export default function PerfilForm({ initialData, metricas }: Props) {
         descricao="Galeria editorial de 3 fotos. Só aparece com as 3 preenchidas."
       >
         <InlineNote tone="warning">
-          A galeria do mídia kit só aparece quando as 3 imagens estiverem preenchidas.
+          A galeria do mídia kit só aparece quando as 3 imagens estiverem preenchidas. Este é o
+          mesmo mosaico do mídia kit e do PDF: arraste cada foto para escolher o enquadramento.
         </InlineNote>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Imagem {i + 1} de 3</p>
-              <input type="hidden" name={`moodboard_url_atual_${i}`} value={moodboardInicial[i] ?? ""} />
-              {moodboardPreviews[i] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={moodboardPreviews[i]!}
-                  alt={`Moodboard ${i + 1}`}
-                  className="h-28 w-full rounded border border-border object-cover"
-                />
-              )}
-              <input
-                name={`moodboard_${i}`}
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const next = [...moodboardPreviews];
-                    next[i] = URL.createObjectURL(file);
-                    setMoodboardPreviews(next);
-                  }
-                }}
-                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-secondary-foreground"
-              />
-            </div>
-          ))}
-        </div>
+        <MoodboardMosaico
+          fotos={moodboardFotos}
+          urlsSalvas={[0, 1, 2].map((i) => moodboardInicial[i]?.url ?? "")}
+          onChange={setMoodboardFotos}
+        />
       </SectionCard>
 
       {/* ── Reels em destaque (até 3) ───────────────────────────── */}

@@ -29,3 +29,6 @@ next-env.d.ts
 
 # macOS
 .DS_Store
+
+# tmp do scripts/check-enquadramento.mjs (removido no fim; sobra se o check quebrar)
+.check-enquadramento-*
