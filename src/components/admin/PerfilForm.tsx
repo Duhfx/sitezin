@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   User, AtSign, MapPin, Users, CalendarRange, LayoutGrid, Trophy,
   Image as ImageIcon, Film, Plus, Eye, X, type LucideIcon,
@@ -10,6 +11,7 @@ import Input from "@/components/ui/Input";
 import Label from "@/components/ui/Label";
 import Textarea from "@/components/ui/Textarea";
 import { cn } from "@/lib/utils";
+import { comprimirImagensDoForm } from "@/lib/imagem-client";
 import { salvarPerfil } from "@/app/admin/(protected)/perfil/actions";
 import { PROFILE_ID, toPresentation } from "@/lib/influencer-profile";
 import MediaKitPresentation from "@/components/midia-kit/MediaKitPresentation";
@@ -87,12 +89,21 @@ export default function PerfilForm({ initialData, metricas }: Props) {
   const reelFileRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Remove a capa manual e devolve a responsabilidade ao sync: limpa a thumb
-  // salva, o preview e qualquer arquivo selecionado. Ao salvar, o reel vai com
-  // thumb vazia e some do mídia kit até a próxima sincronização baixar a capa.
+  // salva, o preview e qualquer arquivo selecionado.
+  //
+  // Salva na hora (submete o form) porque o sync lê os reels DO BANCO, não deste
+  // formulário: com a thumb antiga ainda gravada, materializarThumbsReels pula o
+  // download e a capa velha fica. Sem o save aqui, "remover → sincronizar" não
+  // faz nada e o único aviso seria um texto pedindo pra clicar em Salvar antes.
+  // flushSync garante que o hidden `reel_url_atual_${i}` já esteja vazio no
+  // submit (setState é assíncrono).
   function usarCapaAutomatica(i: number) {
-    setReelThumbs((prev) => prev.map((t, j) => (j === i ? "" : t)));
-    setReelPreviews((prev) => prev.map((t, j) => (j === i ? null : t)));
+    flushSync(() => {
+      setReelThumbs((prev) => prev.map((t, j) => (j === i ? "" : t)));
+      setReelPreviews((prev) => prev.map((t, j) => (j === i ? null : t)));
+    });
     if (reelFileRefs.current[i]) reelFileRefs.current[i]!.value = "";
+    formRef.current?.requestSubmit();
   }
 
   // Soma dos percentuais — gênero e idade devem fechar em 100%. Mostrada ao vivo
@@ -149,13 +160,21 @@ export default function PerfilForm({ initialData, metricas }: Props) {
     }
 
     setLoading(true);
-    const result = await salvarPerfil(formData);
-    setLoading(false);
-
-    if (result?.ok) {
-      setSuccess(true);
-    } else if (result) {
-      setError(result.error ?? "Erro ao salvar o perfil.");
+    try {
+      // Reduz as imagens antes de enviar — foto de celular vem com 10–15 MB.
+      await comprimirImagensDoForm(formData);
+      const result = await salvarPerfil(formData);
+      if (result?.ok) {
+        setSuccess(true);
+      } else if (result) {
+        setError(result.error ?? "Erro ao salvar o perfil.");
+      }
+    } catch (e) {
+      // Sem isso a falha (upload grande demais, rede) só rejeitava a promise: o
+      // botão ficava travado em "Salvando" e parecia que tinha salvo.
+      setError(e instanceof Error ? e.message : "Erro ao salvar o perfil.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -528,7 +547,8 @@ export default function PerfilForm({ initialData, metricas }: Props) {
           Cole só o link do reel. A capa e as métricas (visualizações, curtidas e comentários)
           são puxadas do Instagram na sincronização, e a capa fica salva de forma permanente. O
           envio de imagem é opcional (sobrepõe a capa automática). O reel só aparece no mídia kit
-          depois da 1ª sincronização, quando a capa é baixada.
+          depois da 1ª sincronização, quando a capa é baixada — e trocar o link descarta a capa
+          antiga, então sincronize logo depois de salvar.
         </InlineNote>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -553,7 +573,7 @@ export default function PerfilForm({ initialData, metricas }: Props) {
                         onClick={() => usarCapaAutomatica(i)}
                         className="text-[0.7rem] text-muted-foreground underline underline-offset-2 hover:text-foreground"
                       >
-                        Remover imagem · usar capa automática do sync
+                        Remover imagem · salvar e usar capa automática do sync
                       </button>
                     )}
                   </div>

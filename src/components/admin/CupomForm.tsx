@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Label from "@/components/ui/Label";
 import Image from "next/image";
+import { comprimirImagensDoForm } from "@/lib/imagem-client";
 import { criarCupom, editarCupom } from "@/app/admin/(protected)/cupons/actions";
 import type { Coupon } from "@/types/database";
 
@@ -30,13 +31,19 @@ export default function CupomForm({ initialData }: Props) {
     }
 
     setLoading(true);
-    const result = isEdit
-      ? await editarCupom(initialData.id, formData)
-      : await criarCupom(formData);
-    setLoading(false);
-
-    if (result && !result.ok) {
-      setError(result.error);
+    try {
+      // Reduz a logo antes de enviar (ver src/lib/imagem-client.ts).
+      await comprimirImagensDoForm(formData);
+      const result = isEdit
+        ? await editarCupom(initialData.id, formData)
+        : await criarCupom(formData);
+      if (result && !result.ok) {
+        setError(result.error);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar o cupom.");
+    } finally {
+      setLoading(false);
     }
   }
 

@@ -4,6 +4,11 @@ const nextConfig = {
   // Sem isso o webpack tenta bundlar e o build quebra. Vale para a rota que gera
   // o PDF do mídia kit (src/app/api/midia-kit/pdf/route.ts).
   experimental: {
+    // O padrão é 1 MB e o form do perfil envia até 7 imagens de uma vez. Elas já
+    // chegam comprimidas do browser (~300 KB cada, ver src/lib/imagem-client.ts),
+    // mas o padrão não dava folga nem pra uma foto de celular — o Next cortava o
+    // corpo antes da action rodar e o upload falhava em silêncio.
+    serverActions: { bodySizeLimit: "8mb" },
     serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
     // O @sparticuz/chromium abre os .br de bin/ por caminho montado em runtime, e
     // o rastreamento de arquivos do Next não enxerga isso — sem esta linha a

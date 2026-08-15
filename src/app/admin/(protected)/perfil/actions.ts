@@ -103,8 +103,9 @@ export async function salvarPerfil(formData: FormData) {
   for (let i = 0; i < 3; i++) {
     let thumb = str(formData.get(`reel_url_atual_${i}`)) || "";
     const file = formData.get(`reel_${i}`) as File | null;
-    if (file && file.size > 0) {
-      const result = await uploadImagem(supabase, file, "reels");
+    const enviouArquivo = !!(file && file.size > 0);
+    if (enviouArquivo) {
+      const result = await uploadImagem(supabase, file!, "reels");
       if ("error" in result) return { ok: false, error: result.error };
       thumb = result.url;
     }
@@ -116,7 +117,10 @@ export async function salvarPerfil(formData: FormData) {
     const mesmoLink =
       !!anterior && shortcodeInstagram(anterior.permalink) === shortcodeInstagram(permalink);
     reels.push({
-      thumb,
+      // Link novo sem capa nova enviada → descarta a capa antiga (ela é do reel
+      // anterior). Fica sem thumb até o próximo sync baixar a capa certa —
+      // materializarThumbsReels só age em reel sem thumb.
+      thumb: mesmoLink || enviouArquivo ? thumb : "",
       permalink,
       media_id: mesmoLink ? anterior.media_id : undefined,
       views: mesmoLink ? anterior.views : 0,
