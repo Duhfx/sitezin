@@ -4,6 +4,7 @@ import PerfilTabs from "@/components/admin/PerfilTabs";
 import MetricasPanel, { type MetricaRow } from "@/components/admin/MetricasPanel";
 import InstagramConnect from "@/components/admin/InstagramConnect";
 import TiktokConnect from "@/components/admin/TiktokConnect";
+import ExportarPdfButton from "@/components/admin/ExportarPdfButton";
 import { PROFILE_ID, profileFromConfig } from "@/lib/influencer-profile";
 import type { InfluencerProfile } from "@/types/database";
 
@@ -33,11 +34,14 @@ export default async function PerfilPage({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Perfil</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Conteúdo e métricas exibidos na página do mídia kit.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Perfil</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Conteúdo e métricas exibidos na página do mídia kit.
+          </p>
+        </div>
+        <ExportarPdfButton />
       </div>
 
       <InstagramConnect

@@ -1,5 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // O Chromium do @sparticuz/chromium é um binário de ~50MB empacotado em brotli.
+  // Sem isso o webpack tenta bundlar e o build quebra. Vale para a rota que gera
+  // o PDF do mídia kit (src/app/api/midia-kit/pdf/route.ts).
+  experimental: {
+    serverComponentsExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+    // O @sparticuz/chromium abre os .br de bin/ por caminho montado em runtime, e
+    // o rastreamento de arquivos do Next não enxerga isso — sem esta linha a
+    // função sobe SEM o binário e quebra em produção com "file not found"
+    // (localmente passa despercebido porque o dev usa o Chrome da máquina).
+    outputFileTracingIncludes: {
+      "/api/midia-kit/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
+    },
+  },
   images: {
     // Otimização on-the-fly do Vercel (/_next/image) reabilitada na homologação
     // para validar se a cota restaurada aguenta. Foi desligada porque estourava a

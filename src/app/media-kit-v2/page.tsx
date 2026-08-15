@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import MediaKitPresentationEditorial from "@/components/midia-kit/MediaKitPresentationEditorial";
+import MediaKitDeckPdf from "@/components/midia-kit/MediaKitDeckPdf";
+import DeckOverflowCheck from "@/components/midia-kit/DeckOverflowCheck";
 
 export const metadata: Metadata = { title: "Mídia Kit · Preview Editorial" };
 
@@ -85,7 +87,23 @@ const METRICAS = [
   },
 ];
 
-export default function MediaKitV2PreviewPage() {
+export default function MediaKitV2PreviewPage({
+  searchParams,
+}: {
+  searchParams?: { deck?: string };
+}) {
+  // ?deck=1 mostra a versão PDF (deck 16:9) com os mesmos dados fictícios — é
+  // como validar a paginação do deck sem sessão de admin e sem mexer nos dados
+  // reais. Mesma função que esta rota já cumpre para o layout da web.
+  if (searchParams?.deck) {
+    return (
+      <>
+        <MediaKitDeckPdf influencer={INFLUENCER} metricas={METRICAS} />
+        <DeckOverflowCheck />
+      </>
+    );
+  }
+
   return (
     <div className="relative">
       <div className="sticky top-0 z-50 bg-[#FF9A86] px-6 py-2 text-center text-xs font-medium text-white">
