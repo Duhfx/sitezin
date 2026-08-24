@@ -6,7 +6,14 @@ import { Download, Loader2 } from "lucide-react";
 // A geração roda um Chrome headless no servidor e leva alguns segundos — um <a>
 // simples deixaria o botão mudo esse tempo todo. Daí o fetch com estado: baixa o
 // blob e dispara o download com o nome que a rota devolveu.
-export default function ExportarPdfButton() {
+export default function ExportarPdfButton({
+  desabilitado = false,
+  aviso,
+}: {
+  // O PDF é gerado a partir do banco: com alteração pendente ele sairia velho.
+  desabilitado?: boolean;
+  aviso?: string;
+}) {
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -40,22 +47,13 @@ export default function ExportarPdfButton() {
       <button
         type="button"
         onClick={exportar}
-        disabled={gerando}
-        className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+        disabled={gerando || desabilitado}
+        title={desabilitado ? aviso : undefined}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
       >
-        {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-        {gerando ? "Gerando PDF…" : "Exportar para PDF"}
+        {gerando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        {gerando ? "Gerando PDF…" : "Baixar PDF"}
       </button>
-      <p className="mt-2 text-xs text-muted-foreground">
-        <a
-          href="/admin/midia-kit-pdf"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-foreground"
-        >
-          Pré-visualizar
-        </a>
-      </p>
       {erro && <p className="mt-1 max-w-xs text-xs text-destructive">{erro}</p>}
     </div>
   );

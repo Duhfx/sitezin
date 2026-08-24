@@ -118,3 +118,7 @@ export function toPresentation(p: InfluencerProfile) {
     },
   };
 }
+
+// O formato que os componentes de apresentação consomem. Nomeado aqui para a
+// prévia do admin poder tipar o que manda para dentro do iframe.
+export type InfluencerPresentation = ReturnType<typeof toPresentation>;

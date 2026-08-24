@@ -782,8 +782,10 @@ export default function MediaKitDeckPdf({
         }
       ` }} />
 
+      {/* `id` = âncora da página: a prévia do admin rola até ela quando a seção
+          correspondente é aberta no editor. */}
       {paginas.map((p, i) => (
-        <section key={p.key} className="deck-page" data-pagina={i + 1}>
+        <section key={p.key} id={p.key} className="deck-page" data-pagina={i + 1}>
           {p.sangria ? p.conteudo : <div className="deck-corpo">{p.conteudo}</div>}
           {!p.sangria && (
             <div className="absolute inset-x-[88px] bottom-8 flex items-baseline justify-between border-t border-slate-200 pt-3 text-[10px] uppercase tracking-[0.16em] text-slate-400">

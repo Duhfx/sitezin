@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 //
 // Só existe na tela: tudo aqui está sob @media screen ou print:hidden, então não
 // vaza para o PDF (o page.pdf() do Puppeteer renderiza em media type "print").
-export default function DeckOverflowCheck() {
+export default function DeckOverflowCheck({ chave }: { chave?: string | number }) {
   const [estouradas, setEstouradas] = useState<number[]>([]);
 
   useEffect(() => {
@@ -41,7 +41,10 @@ export default function DeckOverflowCheck() {
     return () => {
       cancelado = true;
     };
-  }, []);
+    // `chave` muda a cada atualização da prévia ao vivo do admin, para remedir o
+    // deck depois de uma edição. Na página do PDF ela não é passada e o efeito
+    // roda uma vez só, como antes.
+  }, [chave]);
 
   return (
     <>

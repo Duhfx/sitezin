@@ -61,7 +61,9 @@ Tipos `Database` escritos à mão (não gerados). Tabelas:
 
 O perfil tem um **fallback estático**: se a linha do banco não existir, `src/config/influencer.ts` + `profileFromConfig()` (`src/lib/influencer-profile.ts`) montam o perfil. `toPresentation()` converte a linha do banco (snake_case) para o formato camelCase que o componente de apresentação espera.
 
-**Componente de apresentação:** a produção (`/midia-kit/acesso/[token]`) e o preview `/media-kit-v2` renderizam `MediaKitPresentationEditorial` (design editorial, animações CSS via `<Reveal>`, sem framer-motion) — ao mexer no layout do mídia kit, edite **este**. O `MediaKitPresentation` antigo sobrevive só no modal de pré-visualização do `PerfilForm` (`src/components/admin/PerfilForm.tsx`), que por isso mostra um design **diferente** do que está no ar (inconsistência conhecida, não alinhada de propósito).
+**Componente de apresentação:** a produção (`/midia-kit/acesso/[token]`), o preview `/media-kit-v2` e a prévia ao vivo do admin renderizam `MediaKitPresentationEditorial` (design editorial, animações CSS via `<Reveal>`, sem framer-motion) — ao mexer no layout do mídia kit, edite **este**. O `MediaKitPresentation` antigo ficou sem uso e pode ser removido.
+
+**Prévia ao vivo do admin:** o editor de perfil (`PerfilForm`) mostra, na coluna da direita, o mídia kit e o deck PDF do que está sendo digitado — inclusive fotos ainda não salvas (`blob:`). O conteúdo roda em `/admin/preview` dentro de um **iframe** alimentado por `postMessage` (contrato em `src/lib/preview-midia-kit.ts`): é o iframe que dá à página uma janela própria, para `100dvh` e media queries valerem de verdade dentro de uma coluna estreita. Abrir uma seção da sanfona rola a prévia até a âncora equivalente — as âncoras são os `id` das seções do editorial e as chaves de página do `MediaKitDeckPdf`, mapeadas em `ANCORAS`. O botão de exportar PDF fica travado enquanto houver alteração não salva, porque a rota de geração lê do banco.
 
 Os arquivos SQL de schema/RLS/seed ficam em `docs/*.sql` e são aplicados manualmente no painel Supabase — não há ferramenta de migration.
 

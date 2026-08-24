@@ -152,7 +152,7 @@ export default function MediaKitPresentationEditorial({
     <div className="min-h-screen bg-[#faf9f6] font-sans text-slate-700 selection:bg-[#FF9A86] selection:text-white">
 
       {/* ── HERO — split lookbook (sempre visível no primeiro paint) ──────────── */}
-      <section className="relative grid min-h-[100dvh] grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
+      <section id="identidade" className="relative grid min-h-[100dvh] grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Coluna texto */}
         <div className="relative z-10 flex flex-col justify-between bg-[#F7F2EC] px-6 pt-16 pb-12 md:px-12 lg:px-16 lg:pt-20 lg:pb-16">
           {/* Glow decorativo: só no desktop. filter:blur() de raio alto trava o
@@ -250,7 +250,7 @@ export default function MediaKitPresentationEditorial({
       <div className="mx-auto max-w-6xl px-6 py-20 md:px-12 md:py-28">
 
         {/* BIO — spread editorial */}
-        <Reveal as="section" className="grid grid-cols-1 gap-x-16 gap-y-8 lg:grid-cols-[0.35fr_0.65fr]">
+        <Reveal as="section" id="bio" className="grid grid-cols-1 gap-x-16 gap-y-8 lg:grid-cols-[0.35fr_0.65fr]">
           <h2 className="font-display text-4xl font-light italic leading-tight text-slate-800 md:text-5xl">
             Muito prazer,<br />sou a <span className="text-[#FF9A86]">{primeiroNome}.</span>
           </h2>
@@ -264,7 +264,7 @@ export default function MediaKitPresentationEditorial({
 
         {/* PLATAFORMAS — Instagram + TikTok lado a lado, sem caixas */}
         {(igFollowers > 0 || tkFollowers > 0) && (
-          <Reveal as="section" className="mt-28">
+          <Reveal as="section" id="plataformas" className="mt-28">
             <SectionMark index="01" title={<>As <span className="text-[#FF9A86]">plataformas</span></>} />
 
             <div className="grid grid-cols-1 gap-x-16 gap-y-14 md:grid-cols-2 md:divide-x md:divide-slate-200/70">
@@ -337,7 +337,7 @@ export default function MediaKitPresentationEditorial({
 
         {/* PERFORMANCE & ENGAJAMENTO */}
         {showPerformance && (
-          <Reveal as="section" className="mt-28">
+          <Reveal as="section" id="performance" className="mt-28">
             <SectionMark index="02" title={<>Performance <span className="text-[#FF9A86]">e engajamento</span></>} />
 
             <div className="grid grid-cols-1 gap-x-16 gap-y-14 md:grid-cols-2 md:divide-x md:divide-slate-200/70">
@@ -410,7 +410,7 @@ export default function MediaKitPresentationEditorial({
 
         {/* REELS EM DESTAQUE — prints do Instagram com métricas */}
         {(influencer.reels?.length ?? 0) > 0 && (
-          <Reveal as="section" className="mt-28">
+          <Reveal as="section" id="reels" className="mt-28">
             <SectionMark index="03" title={<>Reels em <span className="text-[#FF9A86]">destaque</span></>} />
 
             <div className="grid grid-cols-1 gap-x-10 gap-y-12 sm:grid-cols-3">
@@ -467,7 +467,7 @@ export default function MediaKitPresentationEditorial({
 
       {/* LOOKBOOK — faixa de fotografia full-bleed */}
       {influencer.moodboard.length >= 3 && (
-        <section className="relative overflow-hidden bg-[#F7F2EC] py-20 md:py-28">
+        <section id="lookbook" className="relative overflow-hidden bg-[#F7F2EC] py-20 md:py-28">
           {/* Mesmo mosaico da página de lookbook do PDF (MediaKitDeckPdf):
               colunas 5fr/7fr, linhas de altura igual, retrato alto à esquerda. O
               `aspect` do container reproduz a área útil da folha 16:9 (1200x640)
@@ -515,7 +515,7 @@ export default function MediaKitPresentationEditorial({
 
         {/* DEMOGRAFIA / PÚBLICO-ALVO */}
         {showDemografia && (
-          <Reveal as="section">
+          <Reveal as="section" id="publico">
             <SectionMark index="04" title={<>Público <span className="text-[#FF9A86]">alvo</span></>} />
 
             {influencer.publicoAlvo && (
@@ -572,7 +572,7 @@ export default function MediaKitPresentationEditorial({
 
         {/* FORMATOS & ENTREGAS — lista editorial (sem 6 cards iguais) */}
         {influencer.formatos.length > 0 && (
-          <Reveal as="section" className="mt-28">
+          <Reveal as="section" id="formatos" className="mt-28">
             <SectionMark index="05" title={<>Formatos <span className="text-[#FF9A86]">e entregas</span></>} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-16">
@@ -594,7 +594,7 @@ export default function MediaKitPresentationEditorial({
 
         {/* CASES / SUCESSO — citações editoriais */}
         {influencer.cases.length > 0 && (
-          <Reveal as="section" className="mt-28">
+          <Reveal as="section" id="cases" className="mt-28">
             <SectionMark index="06" title={<>Casos de <span className="text-[#FF9A86]">sucesso</span></>} />
 
             <div className="space-y-10">
@@ -619,7 +619,7 @@ export default function MediaKitPresentationEditorial({
 
       {/* CTA FINAL */}
       {(influencer.contato.email || influencer.contato.whatsapp) && (
-        <section className="px-6 pb-16 md:px-12">
+        <section id="contato" className="px-6 pb-16 md:px-12">
           <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-[#FF9A86] px-8 py-16 md:px-16 md:py-24">
             <div className="hidden lg:block absolute right-0 top-0 h-80 w-80 rounded-full bg-white/15 blur-[90px]" />
             <div className="hidden lg:block absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-[#FF7A60]/30 blur-[70px]" />

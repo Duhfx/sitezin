@@ -12,11 +12,15 @@ export default function Reveal({
   as,
   className = "",
   delay = 0,
+  id,
 }: {
   children: ReactNode;
   as?: ElementType;
   className?: string;
   delay?: number;
+  // Âncora da seção: usada pela prévia do admin para rolar até o trecho que
+  // está sendo editado.
+  id?: string;
 }) {
   const Tag = (as ?? "div") as ElementType;
   // Tag é dinâmico, então o tipo do ref não é estático.
@@ -43,6 +47,7 @@ export default function Reveal({
   return (
     <Tag
       ref={ref}
+      id={id}
       className={`reveal${shown ? " is-visible" : ""}${className ? " " + className : ""}`}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >
