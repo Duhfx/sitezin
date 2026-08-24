@@ -47,8 +47,14 @@ const CAMPOS_TEXTO = [
 type CampoTexto = (typeof CAMPOS_TEXTO)[number];
 type Campos = Record<CampoTexto, string>;
 
+// O textarea da biografia sai do DOM com \n, mas no banco ela está com o \r\n
+// que o submit anterior gravou. Sem alinhar os dois, a assinatura do formulário
+// nunca voltaria a bater com a salva e o aviso de pendência ficava preso.
+const semCR = (c: Campos): Campos =>
+  Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v.replace(/\r\n/g, "\n")])) as Campos;
+
 function camposIniciais(p: InfluencerProfile): Campos {
-  return {
+  return semCR({
     nome: p.nome,
     nicho: p.nicho,
     biografia: p.biografia,
@@ -59,7 +65,7 @@ function camposIniciais(p: InfluencerProfile): Campos {
     youtube_url: p.youtube_url ?? "",
     email: p.email ?? "",
     whatsapp: p.whatsapp ?? "",
-  };
+  });
 }
 
 function camposDoForm(form: HTMLFormElement): Campos {
@@ -83,7 +89,6 @@ export default function PerfilForm({ initialData, metricas, conexoes }: Props) {
 
   const [campos, setCampos] = useState<Campos>(() => camposIniciais(initialData));
   const [secaoAberta, setSecaoAberta] = useState("identidade");
-  const [pendente, setPendente] = useState(false);
   const [previewMobile, setPreviewMobile] = useState(false);
 
   const [topEstados, setTopEstados] = useState<TopEstado[]>(initialData.top_estados ?? []);
@@ -142,6 +147,25 @@ export default function PerfilForm({ initialData, metricas, conexoes }: Props) {
     if (reelFileRefs.current[i]) reelFileRefs.current[i]!.value = "";
     formRef.current?.requestSubmit();
   }
+
+  // Assinatura de tudo que é editável. A pendência sai da comparação com a
+  // última versão salva, e não de "houve digitação": assim desfazer a edição na
+  // mão volta pra "Tudo salvo" em vez de deixar o aviso preso — e o botão de
+  // exportar PDF destravado. Os arquivos ainda não enviados entram pelos
+  // previews (`blob:`), que mudam junto.
+  const assinatura = useMemo(
+    () =>
+      JSON.stringify([
+        campos, fotoPreview, topEstados, audienciaGenero, audienciaIdade,
+        formatos, cases, moodboardFotos, reelPreviews, reelPermalinks, reelThumbs,
+      ]),
+    [
+      campos, fotoPreview, topEstados, audienciaGenero, audienciaIdade,
+      formatos, cases, moodboardFotos, reelPreviews, reelPermalinks, reelThumbs,
+    ],
+  );
+  const [assinaturaSalva, setAssinaturaSalva] = useState(assinatura);
+  const pendente = assinatura !== assinaturaSalva;
 
   // Soma dos percentuais — gênero e idade devem fechar em 100%. Mostrada ao vivo
   // como aviso para quem edita não deixar a divisão inconsistente.
@@ -232,7 +256,7 @@ export default function PerfilForm({ initialData, metricas, conexoes }: Props) {
       await comprimirImagensDoForm(formData);
       const result = await salvarPerfil(formData);
       if (result?.ok) {
-        setPendente(false);
+        setAssinaturaSalva(assinatura);
       } else if (result) {
         setError(result.error ?? "Erro ao salvar o perfil.");
       }
@@ -260,10 +284,9 @@ export default function PerfilForm({ initialData, metricas, conexoes }: Props) {
     campos.instagram_url, campos.tiktok_url, campos.youtube_url, campos.email, campos.whatsapp,
   ].filter(Boolean).length;
 
-  // Um onInput no formulário inteiro dá conta da prévia e da pendência: `input`
-  // borbulha de todos os campos, inclusive dos controlados das listas e dos
-  // inputs de arquivo. Fora dele fica só o arraste de enquadramento do
-  // moodboard, que marca pendência no próprio onChange.
+  // Um onInput no formulário inteiro dá conta da prévia: `input` borbulha de
+  // todos os campos, inclusive dos controlados das listas e dos inputs de
+  // arquivo.
   //
   // Grade: a partir de xl a coluna de campos para de crescer e a sobra de tela
   // vira prévia maior, que é quem ganha com espaço (campo de texto com 900px de
@@ -272,10 +295,7 @@ export default function PerfilForm({ initialData, metricas, conexoes }: Props) {
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      onInput={(e) => {
-        setCampos(camposDoForm(e.currentTarget));
-        setPendente(true);
-      }}
+      onInput={(e) => setCampos(camposDoForm(e.currentTarget))}
       noValidate
       className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(380px,0.85fr)] lg:items-start xl:grid-cols-[minmax(0,620px)_minmax(0,1fr)]"
     >
@@ -641,10 +661,7 @@ export default function PerfilForm({ initialData, metricas, conexoes }: Props) {
             <MoodboardMosaico
               fotos={moodboardFotos}
               urlsSalvas={[0, 1, 2].map((i) => moodboardInicial[i]?.url ?? "")}
-              onChange={(fotos) => {
-                setMoodboardFotos(fotos);
-                setPendente(true);
-              }}
+              onChange={setMoodboardFotos}
             />
           </Secao>
 
